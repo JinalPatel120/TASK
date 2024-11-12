@@ -4,7 +4,6 @@ from shopping_site.domain.authentication.services import UserService,LoginServic
 from typing import Dict,Optional
 
 
-
 class UserApplicationService:
     """
     Application service class that interacts with the domain layer for user-related operations.
@@ -52,9 +51,6 @@ class PasswordResetService:
        
         return user
 
-    
-
-
     @staticmethod
     def reset_password(email: str, new_password: str, confirm_password: str) -> Optional[str]:
         """
@@ -64,8 +60,7 @@ class PasswordResetService:
             return "Passwords do not match."
         
         if len(new_password) < 8:  # Example of password criteria: at least 8 characters
-            return "Password must be at least 8 characters long."
-        
+            return "Password must be at least 8 characters long."  
         try:
             user = User.objects.get(email=email)
             user.password = new_password  # Ensure the new password is hashed

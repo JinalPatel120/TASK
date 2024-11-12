@@ -108,14 +108,6 @@ class ForgotPasswordView(View):
         Handles the email submission for the password reset.
         """
         email = request.POST.get("email")
-       
-
-        if not email:
-            return JsonResponse({
-                "status": "error",
-                "message": "Email is required"
-            }, status=400)
-
         # Request password reset using the PasswordResetService
         result = PasswordResetService.request_password_reset(email)
        
@@ -144,12 +136,7 @@ class ResetPasswordView(View):
         new_password = request.POST.get("new_password")
         confirm_password = request.POST.get("confirm_password")
 
-        if not new_password or not confirm_password:
-            return JsonResponse({
-                "status": "error",
-                "message": "Both password and confirmation are required."
-            }, status=400)
-
+        
         # Reset the password using PasswordResetService
         result = PasswordResetService.reset_password(email, new_password, confirm_password)
 

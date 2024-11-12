@@ -1,8 +1,6 @@
 from shopping_site.domain.authentication.models import UserFactory
 from shopping_site.domain.authentication.models import User
 from typing import Dict,Optional
-from django.contrib.auth.hashers import check_password
-
 
 class UserService:
     """

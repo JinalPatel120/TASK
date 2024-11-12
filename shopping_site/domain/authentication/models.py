@@ -50,8 +50,8 @@ class UserFactory:
         username: str,
         email: str,
         password: str,
-        first_name: str = "",
-        last_name: str = "",
+        first_name: str,
+        last_name: str ,
     ) -> User:
         """
         This is a factory method used for building an instance of User.
@@ -83,7 +83,7 @@ class UserFactory:
             id=id.value,
             username=username,
             email=email,
-            password=password,  # Password will be hashed when saved to DB
+            password=password,  
             first_name=first_name,
             last_name=last_name,
         )

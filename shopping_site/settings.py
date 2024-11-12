@@ -29,10 +29,12 @@ template_dirs = glob.glob(os.path.join(interface_templates_dir, '**', 'templates
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = bool(int(os.getenv("DEBUG", 0)))
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
+
 
 
 # Application definition
