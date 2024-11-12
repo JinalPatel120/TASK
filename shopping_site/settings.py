@@ -13,10 +13,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import glob
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+interface_templates_dir = os.path.join(BASE_DIR, 'shopping_site', 'interface')
+template_dirs = glob.glob(os.path.join(interface_templates_dir, '**', 'templates'), recursive=True)
 
 
 # Quick-start development settings - unsuitable for production
@@ -41,6 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'shopping_site.domain.authentication',
+    'shopping_site.domain.cart_item',
+    'shopping_site.domain.order',
+    'shopping_site.domain.product'
 ]
 
 MIDDLEWARE = [
@@ -58,7 +65,7 @@ ROOT_URLCONF = 'shopping_site.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS':  [BASE_DIR,*template_dirs],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
