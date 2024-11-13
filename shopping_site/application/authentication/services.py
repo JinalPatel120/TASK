@@ -104,6 +104,7 @@ class UserApplicationService:
     def save_otp(request, email, otp, expiration_time):
          # Save OTP and its expiration time in the session (or a database)
         session_key = f"otp_{email}"  # Create a unique session key based on email
+        print(session_key)
         session_data = {
             'otp': otp,
             'expiration_time': expiration_time.isoformat(),  # Convert to string for JSON serialization

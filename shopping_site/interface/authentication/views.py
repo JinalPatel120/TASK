@@ -24,7 +24,7 @@ class RegisterView(FormView):
         """
         try:
            # Get cleaned data from form
-            cleaned_data = form.cleaned_data 
+            cleaned_data = form.cleaned_data
             user_data = {
                 "username": cleaned_data['username'],
                 "email": cleaned_data['email'],
@@ -89,7 +89,7 @@ class LoginView(FormView):
 
         if user:
             logger.info(f"User logged in successfully: {username}")
-            return redirect(self.get_success_url())  # Redirect to product page
+            return (self.get_success_url())  # Redirect to product page
         else:
             messages.error(self.request, "Invalid username or password.")
             logger.warning(f"Failed login attempt for username: {username}")
@@ -128,7 +128,6 @@ class OTPVerificationView(FormView):
     template_name = 'verify_otp.html'
     form_class = OTPVerificationForm
     success_url = 'reset_password'
-
     def form_valid(self, form):
         otp = form.cleaned_data['otp']
         email = self.request.session.get('reset_email')
