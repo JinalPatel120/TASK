@@ -14,28 +14,7 @@ class ProductListView(View):
     def get(self, request):
         products = ProductApplicationService.get_all_products()
         product_data = [{"id": product.id, "title": product.title, "price": product.price} for product in products]
-        return JsonResponse({"products": product_data}, status=200)
-
-
-class ProductDetailView(View):
-    """
-    Retrieve a product by ID.
-    """
-
-    def get(self, request, product_id):
-        try:
-            product = ProductApplicationService.get_product_by_id(product_id)
-            product_data = {
-                "id": product.id,
-                "title": product.title,
-                "description": product.description,
-                "price": product.price,
-                "quantity": product.quantity,
-                "image": product.image.url if product.image else None
-            }
-            return JsonResponse({"product": product_data}, status=200)
-        except ValueError:
-            return JsonResponse({"error": "Product not found"}, status=404)
+        return render(request,'product_list.html',{'product_data':product_data})
 
 
 class ProductCreateView(View):
@@ -60,6 +39,16 @@ class ProductUpdateView(View):
     """
     Update an existing product.
     """
+    def get(self, request, product_id):
+        product = ProductApplicationService.get_product_by_id(product_id)
+        product_data = {
+            "title": product.title,
+            "description": product.description,
+            "price": product.price,
+            "quantity": product.quantity,
+            "image": product.image
+        }
+        return render(request, 'product_update.html', {'product_data': product_data})
 
     def post(self, request, product_id):
         data = request.POST
@@ -76,12 +65,10 @@ class ProductUpdateView(View):
         except ValueError:
             return JsonResponse({"error": "Product not found"}, status=404)
 
-
 class ProductSearchView(View):
     """
     Search for products by title.
     """
-
     def get(self, request):
         query = request.GET.get("query", "")
         products = ProductApplicationService.search_products(query)

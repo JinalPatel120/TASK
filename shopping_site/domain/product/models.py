@@ -13,17 +13,6 @@ class ProductID:
 
 
 # ----------------------------------------------------------------------
-# Category Model
-# ----------------------------------------------------------------------
-
-class Category(TimestampedModel):
-    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
-    category_name = models.CharField(max_length=150, unique=True, null=False, blank=False)
-
-    class Meta:
-        db_table = "category"
-        
-# ----------------------------------------------------------------------
 # Product Model
 # ----------------------------------------------------------------------
 

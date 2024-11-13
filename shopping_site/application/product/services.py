@@ -13,6 +13,24 @@ class ProductApplicationService:
     """
 
     @staticmethod
+    def get_product_by_id(product_id: str) -> Product:
+        """
+        Retrieves a product by its ID.
+        
+        Args:
+            product_id (str): The ID of the product to retrieve.
+        
+        Returns:
+            Product: The product corresponding to the given ID.
+        
+        Raises:
+            ValueError: If the product is not found.
+        """
+        product = ProductService.get_product_by_id(product_id)
+        if not product:
+            raise ValueError("Product not found")
+        return product
+    @staticmethod
     def create_product(data: Dict) -> Product:
         """
         Creates a new product using the provided data.
