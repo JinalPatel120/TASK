@@ -3,11 +3,12 @@ from django.contrib.auth import login
 from django.views.generic.edit import FormView
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseServerError
-from .forms import RegistrationForm,UserLoginForm
-from shopping_site.application.authentication.services import UserApplicationService ,PasswordResetService # Assuming the service is correctly imported
-from django.views import View
+from .forms import RegistrationForm,UserLoginForm,ForgotPasswordForm,ResetPasswordForm,OTPVerificationForm
+from shopping_site.application.authentication.services import UserApplicationService 
 from django.contrib import messages
-from django.http import JsonResponse
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RegisterView(FormView):
     """
@@ -22,128 +23,144 @@ class RegisterView(FormView):
         Handle valid form submission.
         """
         try:
-            # Get cleaned data from form
-            cleaned_data = form.cleaned_data
-
-            # Prepare user data
+           # Get cleaned data from form
+            cleaned_data = form.cleaned_data 
             user_data = {
                 "username": cleaned_data['username'],
                 "email": cleaned_data['email'],
                 "password": cleaned_data['password'],
-                "first_name": cleaned_data.get('first_name', ''),
-                "last_name": cleaned_data.get('last_name', '')
+                "first_name": cleaned_data.get('first_name'),
+                "last_name": cleaned_data.get('last_name')
             }
 
             # Use the UserApplicationService to register a new user
             user = UserApplicationService.register_user(user_data)
-
+            if isinstance(user, str):
+                # If the result is an error message (string), return it
+                if 'email' in user:
+                    form.add_error('email', user)
+                elif 'username' in user:
+                    form.add_error('username', user)
+                return self.form_invalid(form)
             # Log in the user after successful registration
             login(self.request, user)
 
             # Return success response (redirects to the home page)
+            messages.success(self.request,'User Register Successfully !')
+            logger.info(f"User registered and logged in: {cleaned_data['username']}")
             return redirect(self.success_url)
 
         except ValidationError as e:
-      
+            logger.error(f"Validation error during registration: {str(e)}")
             return self.form_invalid(form)
 
         except Exception as e:
-            # Handle any other exceptions
+            logger.error(f"Unexpected error during registration: {str(e)}")
             return HttpResponseServerError(f"An error occurred: {str(e)}")
 
     def form_invalid(self, form):
         """
         Handle invalid form submission.
         """
-        # If form is invalid, render the form again with errors
+        return self.render_to_response({'form': form})   # If form is invalid, render the form again with errors
+
+
+class LoginView(FormView):
+    """
+    User login view
+    """
+    template_name = 'login.html'
+    form_class = UserLoginForm
+    success_url = 'product_page'  # URL to redirect after successful login
+
+    def form_valid(self, form):
+        """
+        Handle valid form submission.
+        """
+        username = form.cleaned_data['username']
+        password = form.cleaned_data['password']
+
+        # Authenticate the user
+        credentials = {
+            'username': username,
+            'password': password
+        }
+        user = UserApplicationService.login_user(credentials)
+
+        if user:
+            logger.info(f"User logged in successfully: {username}")
+            return redirect(self.get_success_url())  # Redirect to product page
+        else:
+            messages.error(self.request, "Invalid username or password.")
+            logger.warning(f"Failed login attempt for username: {username}")
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        """
+        Handle invalid form submission.
+        """
+        messages.error(self.request, "There was an error with your login credentials.")
         return self.render_to_response({'form': form})
-
-
-class LoginView(View):
-    """User login view"""
-
-    def get(self, request):
-        # Render the login form on GET request
-        form = UserLoginForm()
-        return render(request, "login.html", {"form": form})
-
-   
-    def post(self, request):
-        form = UserLoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-
-            # Authenticate the user
-            user = UserApplicationService.login_user(username,password)
-          
-            if user is not None:
-              
-                return redirect('product_page')  # Redirect to product page
-            else:
-                messages.error(request, "Invalid username or password.")
-                return render(request, 'login.html', {'form': form})
-
-        else:
-            messages.error(request, "There was an error with your login credentials.")
-            return render(request, 'login.html', {'form': form})
         
 
+class ForgotPasswordView(FormView):
+    template_name = 'forgot_password.html'
+    form_class = ForgotPasswordForm
+    success_url = 'verify_otp'
 
+    def form_valid(self, form):
+        email = form.cleaned_data['email']
+        result = UserApplicationService.request_password_reset(email)
 
-
-class ForgotPasswordView(View):
-    """
-    This view handles forgot password requests.
-    """
-
-    def get(self, request):
-        """
-        Displays the form to enter the email for password reset.
-        """
-        return render(request, 'forgot_password.html')
-
-    def post(self, request):
-        """
-        Handles the email submission for the password reset.
-        """
-        email = request.POST.get("email")
-        # Request password reset using the PasswordResetService
-        result = PasswordResetService.request_password_reset(email)
-       
-
-        if result :
-            return redirect('reset_password', email=email)
+        if result["success"]:    # If successful, generate and send OTP, then redirect
+            UserApplicationService.generate_and_send_otp(self.request, email)
+            self.request.session['reset_email'] = email
+            messages.success(self.request, "OTP has been sent to your email.")
+            logger.info(f"OTP requested for email: {email}")
+            return redirect(self.get_success_url())
         else:
-          return render(request,'forgot_password.html')
+            messages.error(self.request, result["error_message"])  # If user with this email does not exist, return error message
+            logger.warning(f"Failed to request password reset for email {email}: {result['error_message']}")
+            return self.form_invalid(form)
 
 
-class ResetPasswordView(View):
-    """
-    This view handles the reset password functionality.
-    """
+class OTPVerificationView(FormView):
+    template_name = 'verify_otp.html'
+    form_class = OTPVerificationForm
+    success_url = 'reset_password'
 
-    def get(self, request, email):
-        """
-        Displays the form to enter the new password and confirm it.
-        """
-        return render(request, 'reset_password.html', {'email': email})
-
-    def post(self, request, email):
-        """
-        Handles the new password and confirmation submission for reset.
-        """
-        new_password = request.POST.get("new_password")
-        confirm_password = request.POST.get("confirm_password")
-
+    def form_valid(self, form):
+        otp = form.cleaned_data['otp']
+        email = self.request.session.get('reset_email')
+        verify=UserApplicationService.verify_otp(self.request,email, otp)
+        if email and verify:
+            messages.success(self.request, "OTP Verified successfully!")
+            logger.info(f"OTP verified successfully for email {email}")
+            return redirect(self.get_success_url())  
+        else:
+            messages.error(self.request, "Invalid OTP. Please try again.")
+            logger.warning(f"Invalid OTP for email {email}")
+            return redirect('verify_otp')
         
-        # Reset the password using PasswordResetService
-        result = PasswordResetService.reset_password(email, new_password, confirm_password)
+    def form_invalid(self, form):     # Optional: Handle form invalid case if needed
+        messages.error(self.request, "Please fix the errors below.")
+        return self.render_to_response({'form': form})
+            
 
-        if result:
-            return redirect('login')  # Redirect to login page
+class ResetPasswordView(FormView):
+    template_name = 'reset_password.html'
+    form_class = ResetPasswordForm
+    success_url = '/login/'
+
+    def form_valid(self, form):
+        new_password = form.cleaned_data['new_password']
+        email = self.request.session.get('reset_email')
+        if email:
+            UserApplicationService.reset_password(email, new_password)
+            logger.info(f"Password reset successfully for email {email}")
+            messages.success(self.request, "Password reset successfully.")
+            return redirect(self.get_success_url()) 
         else:
-            return JsonResponse({
-                "status": "error",
-                "message": result
-            }, status=400)
+            messages.error(self.request, "An error occurred.")
+            logger.error(f"Password reset failed for email {email}")
+            return self.form_invalid(form)

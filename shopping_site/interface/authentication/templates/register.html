@@ -132,10 +132,9 @@
 
             inputs.forEach(input => {
                 input.addEventListener('input', function () {
-                    const error = document.getElementById(input.id + 'Error');
-                    if (input.value.trim()) {
+                    if (input.classList.contains('is-invalid')) {
                         input.classList.remove('is-invalid');
-                        error.textContent = '';
+                        document.getElementById(`${input.id}Error`).textContent = '';
                     }
                 });
             });

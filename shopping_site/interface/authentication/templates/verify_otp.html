@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        {% if message.level == 40 %} <!-- Error message -->
+                            <li class="alert alert-danger">{{ message }}</li>
+                        {% elif message.level == 25 %} <!-- Success message -->
+                            <li class="alert alert-success">{{ message }}</li>
+                        {% else %}
+                            <li class="alert alert-info">{{ message }}</li> 
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        <h2>Verify OTP</h2>
+
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            
+            
+
+            <button type="submit" class="btn btn-primary">Verify</button>
+            <button class="btn btn-secondary">
+                <a href="{% url 'forgot_password' %}" style="color: white; text-decoration: none;">Back</a>
+            </button>
+            
+         
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

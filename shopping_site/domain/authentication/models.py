@@ -1,8 +1,8 @@
-
+#shopping_site/domain/authentication/models.py
 from dataclasses import dataclass
 import uuid
 from django.db import models
-from typing import Optional
+from django.contrib.auth.models import AbstractUser,BaseUserManager
 
 
 
@@ -13,12 +13,35 @@ class UserID:
     """
     value: uuid.UUID
 
+class CustomUserManager(BaseUserManager):
+    """
+    Custom manager for the custom user model.
+    """
+    def create_user(self, username, email, password=None, **extra_fields):
+        """
+        Create and return a regular user with an email and password.
+        """
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email, password=None, **extra_fields):
+        """
+        Create and return a superuser with an email, password, and other required fields.
+        """
+    
+
+        return self.create_user(username, email, password, **extra_fields)
 
 # ----------------------------------------------------------------------
 # User Model
 # ----------------------------------------------------------------------
 
-class User(models.Model):
+class User(AbstractUser):
     """
     Represents a User model in the Domain Layer.
     """
@@ -33,8 +56,18 @@ class User(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = CustomUserManager()
+    is_active = None
+    is_staff = None
+    last_login = None
+    is_superuser = None
+    date_joined=None
+
     class Meta:
         db_table = "user"
+        
+
+  
 
 
 class UserFactory:
@@ -88,25 +121,4 @@ class UserFactory:
             last_name=last_name,
         )
     
-    @classmethod
-    def find_by_username(cls, username: str) -> Optional[User]:
-        """
-        This method finds a user by their username from the actual database.
-        """
-        try:
-            user = User.objects.get(username=username)
-            return user
-        except User.DoesNotExist:
-            return None
-        
-    @classmethod
-    def find_by_email(cls,email:str) -> Optional[User]:
-        """
-        This method finds a user by their username from the actual database.
-        """
-        try:
-            user = User.objects.get(email=email)
-            return user
-        except User.DoesNotExist:
-            return None
-
+ 

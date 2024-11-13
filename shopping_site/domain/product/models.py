@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import uuid
 from django.db import models
+from shopping_site.utils.custom_models import TimestampedModel
 
 
 @dataclass(frozen=True)
@@ -12,10 +13,21 @@ class ProductID:
 
 
 # ----------------------------------------------------------------------
+# Category Model
+# ----------------------------------------------------------------------
+
+class Category(TimestampedModel):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    category_name = models.CharField(max_length=150, unique=True, null=False, blank=False)
+
+    class Meta:
+        db_table = "category"
+        
+# ----------------------------------------------------------------------
 # Product Model
 # ----------------------------------------------------------------------
 
-class Product(models.Model):
+class Product(TimestampedModel):
     """
     Represents a Product model in the Domain Layer.
     """
@@ -26,8 +38,6 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, blank=True,decimal_places=4)
     quantity = models.IntegerField( blank=True)
     image=models.ImageField(upload_to='product_image')
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "product"
