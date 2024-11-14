@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'shopping_site.domain.order',
     'shopping_site.domain.product',
     'rest_framework',
-    'drf_yasg'
+    'drf_yasg',
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
@@ -59,7 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'shopping_site.infrastructure.middleware.SqlLoggerMiddleware',
+    # 'shopping_site.infrastructure.middleware.SqlLoggerMiddleware',
 ]
 
 ROOT_URLCONF = 'shopping_site.urls'
@@ -144,3 +145,38 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG', 
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'django_app.log'),
+            'formatter': 'standard',
+        },
+        'console': {
+            'level': 'INFO', 
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'], 
+            'level': 'INFO',  
+            'propagate': True,
+        },
+        'shopping_site': {  
+            'handlers': ['console', 'file'],
+            'level': 'INFO',  
+            'propagate': False,
+        },
+    },
+}

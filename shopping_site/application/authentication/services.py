@@ -1,5 +1,5 @@
 #shopping_site/application/authentication/services.py
-from shopping_site.domain.authentication.models import User
+from shopping_site.domain.authentication.models import User,OTP
 from shopping_site.domain.authentication.services import UserServices
 from typing import Dict,Optional
 from django.db import IntegrityError
@@ -8,6 +8,10 @@ from django.core.mail import send_mail
 import random
 from django.utils import timezone
 from datetime import timedelta,datetime
+from django.contrib.auth.hashers import make_password,check_password
+from django.contrib.auth import login
+from django.core.exceptions import ValidationError
+
     
 class UserApplicationService:
     """
@@ -22,7 +26,7 @@ class UserApplicationService:
         # Extract user data
         username = user_data['username']
         email = user_data['email']
-        password = user_data['password']
+        password = make_password(user_data['password'])  # Hash the password
         first_name = user_data.get('first_name')
         last_name = user_data.get('last_name')
 
@@ -32,7 +36,6 @@ class UserApplicationService:
         if User.objects.filter(username=username).exists():
             return "A user with this username already exists."
 
-
         # Call UserServices to create the user and return the created user object
         user = UserServices.get_user_factory().build_entity_with_id(
             username=username,
@@ -41,7 +44,7 @@ class UserApplicationService:
             first_name=first_name,
             last_name=last_name
         )
- 
+
         try:
             # Save the user to the database
             user.save()
@@ -59,19 +62,22 @@ class UserApplicationService:
     
 
     @staticmethod
-    def login_user(credentials: dict) -> Optional[dict]:
+    def login_user(credentials: dict,request) -> Optional[dict]:
         username = credentials.get("username")
         password = credentials.get("password")
         try:
-            user = UserServices.get_user_by_username(username)
-            if user.password == password:  
-                return {
-                    "email": user.email,
-                    "password": user.password
-                }
+            if not username or not password:
+                raise ValidationError("Both fields are required.")
+            user = UserServices.get_user_by_username(username=username)
+            
+            # Use check_password to compare the entered password with the hashed password
+            if check_password(password, user.password):
+                return user
+            else:
+                print("Invalid password")
+                return None
         except User.DoesNotExist:
-            return None  
-
+            print("User not found")
         return None
 
     @staticmethod
@@ -89,10 +95,8 @@ class UserApplicationService:
         otp = str(random.randint(100000, 999999))
         expiration_time = timezone.now() + timedelta(minutes=5)  # OTP expires in 5 minutes
         
-        # Save OTP and expiration time to session (or database)
         UserApplicationService.save_otp(request, email, otp, expiration_time)
         
-        # Send OTP to the user via email
         send_mail(
             'Your OTP Code',
             f'Your OTP code is {otp}',
@@ -102,38 +106,45 @@ class UserApplicationService:
         return otp
     @staticmethod
     def save_otp(request, email, otp, expiration_time):
-         # Save OTP and its expiration time in the session (or a database)
-        session_key = f"otp_{email}"  # Create a unique session key based on email
-        print(session_key)
-        session_data = {
-            'otp': otp,
-            'expiration_time': expiration_time.isoformat(),  # Convert to string for JSON serialization
-        }
-        # Store OTP and expiration time in the session
-        request.session[session_key] = session_data
+        try:
+            user = User.objects.get(email=email)
+            
+            # Check if an OTP entry already exists for the user
+            otp_record, created = OTP.objects.update_or_create(
+                user=user,
+                defaults={
+                    'otp': otp,
+                    'expiration_time': expiration_time,
+                    'created_at': timezone.now()  # Update created_at to current time
+                }
+            )
+            
+            if created:
+                print(f"New OTP saved for {email}")
+            else:
+                print(f"Existing OTP updated for {email}")
+        except User.DoesNotExist:
+            print(f"User with email {email} does not exist.")
+
 
 
     @staticmethod
     def verify_otp(request, email, otp):
-        # Retrieve OTP and expiration time from session
-        session_key = f"otp_{email}"  # Unique key for the user's OTP session data
-        session_data = request.session.get(session_key)
-        if not session_data:
-            return False
-        
-        stored_otp = session_data.get('otp')
-        expiration_time_str = session_data.get('expiration_time')
-        expiration_time = datetime.fromisoformat(expiration_time_str)
+        try:
+            user = User.objects.get(email=email)
+           
+            otp_record = OTP.objects.filter(user=user).order_by('-created_at').first()
 
-        
-        # Check if OTP matches and if it has expired
-        if stored_otp == otp and timezone.now() < expiration_time:
-            return True
-        return False
+            if otp_record and otp_record.otp == otp and timezone.now() < otp_record.expiration_time:
+                return True
+            return False
+        except User.DoesNotExist:
+            return False
 
 
     @staticmethod
     def reset_password(email, new_password):
         user = User.objects.get(email=email)
-        user.password = new_password 
+        hashed_password = make_password(new_password)
+        user.password = hashed_password
         user.save()

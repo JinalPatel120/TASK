@@ -1,6 +1,6 @@
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render,HttpResponse
 from django.contrib.auth import login
-from django.views.generic.edit import FormView
+from django.views.generic.edit import CreateView,FormView
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseServerError
 from .forms import RegistrationForm,UserLoginForm,ForgotPasswordForm,ResetPasswordForm,OTPVerificationForm
@@ -8,7 +8,8 @@ from shopping_site.application.authentication.services import UserApplicationSer
 from django.contrib import messages
 import logging
 
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger('shopping_site')
 
 class RegisterView(FormView):
     """
@@ -25,6 +26,7 @@ class RegisterView(FormView):
         try:
            # Get cleaned data from form
             cleaned_data = form.cleaned_data
+         
             user_data = {
                 "username": cleaned_data['username'],
                 "email": cleaned_data['email'],
@@ -62,44 +64,46 @@ class RegisterView(FormView):
         """
         Handle invalid form submission.
         """
+    
         return self.render_to_response({'form': form})   # If form is invalid, render the form again with errors
 
 
+
 class LoginView(FormView):
-    """
-    User login view
-    """
-    template_name = 'login.html'
     form_class = UserLoginForm
-    success_url = 'product_page'  # URL to redirect after successful login
+    template_name = 'login.html'
+    success_url = 'register'
 
     def form_valid(self, form):
-        """
-        Handle valid form submission.
-        """
-        username = form.cleaned_data['username']
-        password = form.cleaned_data['password']
+        # Get the cleaned data from the form
+        username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password')
+        logger.info(f"Login attempt with username: {username}")  
 
-        # Authenticate the user
-        credentials = {
-            'username': username,
-            'password': password
-        }
-        user = UserApplicationService.login_user(credentials)
-
-        if user:
-            logger.info(f"User logged in successfully: {username}")
-            return (self.get_success_url())  # Redirect to product page
-        else:
-            messages.error(self.request, "Invalid username or password.")
-            logger.warning(f"Failed login attempt for username: {username}")
+        try:
+            credentials = {
+                'username': username,
+                'password': password
+            }
+            user = UserApplicationService.login_user(credentials,self.request)       
+            if user:
+                logger.info(f"Authentication successful for user: {username}")  
+                login(self.request, user)
+                return redirect(self.success_url)  
+            else:
+                logger.warning(f"Authentication failed for username: {username}")  # Log failed authentication
+                messages.error(self.request, "Invalid username or password.")
+                return self.form_invalid(form)
+        
+        except ValidationError as e:
+            # Handle validation errors and add to the form
+            logger.error(f"Validation error: {str(e)}")  # Log the validation error
+            messages.error(self.request, str(e))
             return self.form_invalid(form)
 
     def form_invalid(self, form):
-        """
-        Handle invalid form submission.
-        """
-        messages.error(self.request, "There was an error with your login credentials.")
+        # If the form is invalid, render the form with errors
+        logger.warning(f"Form invalid: {form.errors}")
         return self.render_to_response({'form': form})
         
 
@@ -128,6 +132,7 @@ class OTPVerificationView(FormView):
     template_name = 'verify_otp.html'
     form_class = OTPVerificationForm
     success_url = 'reset_password'
+
     def form_valid(self, form):
         otp = form.cleaned_data['otp']
         email = self.request.session.get('reset_email')
@@ -142,7 +147,7 @@ class OTPVerificationView(FormView):
             return redirect('verify_otp')
         
     def form_invalid(self, form):     # Optional: Handle form invalid case if needed
-        messages.error(self.request, "Please fix the errors below.")
+        messages.error(self.request, "OTP must be in digits")
         return self.render_to_response({'form': form})
             
 
