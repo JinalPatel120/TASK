@@ -2,10 +2,6 @@ from django import forms
 from django.core.exceptions import ValidationError
 from shopping_site.domain.authentication.models import User
 import re
-from django.contrib.auth import authenticate
-
-
-
 
 class RegistrationForm(forms.ModelForm):
     confirm_password = forms.CharField(
@@ -58,60 +54,83 @@ class RegistrationForm(forms.ModelForm):
         return password
 
     def clean(self):
-     
-         
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         confirm_password = cleaned_data.get("confirm_password")
         
-        print(f'password {password} and confirm password {confirm_password}')
+   
         if password != confirm_password:
             self.add_error('confirm_password', 'Password and Confirm Password do not match.')
         
         return cleaned_data
 
-
-
 class UserLoginForm(forms.Form):
-    username = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'placeholder': 'Username', 'class': 'form-control'}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'form-control'}))
-
-    error_messages = {
-        'username': {'required': 'Username is required.'},
-        'password': {'required': 'Password is required.'},
-    }
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={'placeholder': 'Username', 'class': 'form-control'}),
+        required=False,
+        error_messages={'required': 'Please enter your username.'} 
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'form-control'}),
+        required=False,
+        error_messages={'required': 'Please enter your password.'}  
+    )
 
     def clean(self):
         cleaned_data = super().clean()
         username = cleaned_data.get('username')
         password = cleaned_data.get('password')
 
-        # Ensure both fields are provided
         if not username:
-            raise forms.ValidationError("Username is required.")
+            self.add_error('username', 'Username is required.')
         if not password:
-            raise forms.ValidationError("Password is required.")
+            self.add_error('password', 'Password is required.')
 
         return cleaned_data
-   
-  
+
+
 class ForgotPasswordForm(forms.Form):
-    email = forms.CharField(label='email', required=True)
+    email = forms.CharField(label='Email',required=False,
+        error_messages={'required': 'Please enter your email ID.'} )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not email:
+            raise ValidationError('This field is required.')
+
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            raise ValidationError('Enter a valid email address.')
+        return email
+
 
 class OTPVerificationForm(forms.Form):
-    otp = forms.CharField(label='OTP', max_length=6, required=True)
+    otp = forms.CharField(label='OTP', max_length=6,required=False,  error_messages={
+            'required': 'Please enter the OTP to proceed.'  
+        })
+
+    if not otp:
+        raise ValidationError('This field is required.')
     
     def clean_otp(self):
         otp = self.cleaned_data.get('otp')
+
+        if not otp:
+            raise ValidationError('This field is required.')
+    
         if not otp.isdigit():
             raise forms.ValidationError("OTP must be in digits.")
+        
+        if len(otp) != 6:
+            raise forms.ValidationError("OTP must be exactly 6 digits long.")
+
         return otp
-    
     
 
 class ResetPasswordForm(forms.Form):
-    new_password = forms.CharField(label='New Password', widget=forms.PasswordInput, required=True)
-    confirm_password = forms.CharField(label='Confirm Password', widget=forms.PasswordInput, required=True)
+    new_password = forms.CharField(label='New Password', widget=forms.PasswordInput)
+    confirm_password = forms.CharField(label='Confirm Password', widget=forms.PasswordInput)
 
     def clean(self):
         cleaned_data = super().clean()

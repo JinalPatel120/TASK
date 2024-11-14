@@ -14,7 +14,6 @@ class UserServices:
         """
         This method returns the UserFactory class for creating users.
         """
-        print(UserFactory,'user factory')
         return UserFactory
 
     @staticmethod

@@ -119,10 +119,7 @@ class UserApplicationService:
                 }
             )
             
-            if created:
-                print(f"New OTP saved for {email}")
-            else:
-                print(f"Existing OTP updated for {email}")
+      
         except User.DoesNotExist:
             print(f"User with email {email} does not exist.")
 

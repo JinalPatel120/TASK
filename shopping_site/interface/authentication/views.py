@@ -1,13 +1,12 @@
-from django.shortcuts import redirect, render,HttpResponse
+from django.shortcuts import redirect
 from django.contrib.auth import login
-from django.views.generic.edit import CreateView,FormView
+from django.views.generic.edit import FormView
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseServerError
 from .forms import RegistrationForm,UserLoginForm,ForgotPasswordForm,ResetPasswordForm,OTPVerificationForm
 from shopping_site.application.authentication.services import UserApplicationService 
 from django.contrib import messages
 import logging
-
 
 logger = logging.getLogger('shopping_site')
 
@@ -64,10 +63,7 @@ class RegisterView(FormView):
         """
         Handle invalid form submission.
         """
-    
-        return self.render_to_response({'form': form})   # If form is invalid, render the form again with errors
-
-
+        return self.render_to_response({'form': form})   
 
 class LoginView(FormView):
     form_class = UserLoginForm
@@ -75,7 +71,10 @@ class LoginView(FormView):
     success_url = 'register'
 
     def form_valid(self, form):
-        # Get the cleaned data from the form
+        """
+        Handles the valid form submission. Attempts to authenticate the user based on the provided
+        username and password."""
+         
         username = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
         logger.info(f"Login attempt with username: {username}")  
@@ -102,10 +101,18 @@ class LoginView(FormView):
             return self.form_invalid(form)
 
     def form_invalid(self, form):
-        # If the form is invalid, render the form with errors
+        """
+        Handles the invalid form submission. Logs form errors and displays them to the user.
+        # If the form is invalid, render the form with errors """
+
         logger.warning(f"Form invalid: {form.errors}")
-        return self.render_to_response({'form': form})
+
+        for field, errors in form.errors.items():
+            for error in errors:
+                # Pass the error message dynamically based on the form field
+                messages.error(self.request, f"{field.capitalize()}: {error}")
         
+        return self.render_to_response({'form': form})
 
 class ForgotPasswordView(FormView):
     template_name = 'forgot_password.html'
@@ -113,19 +120,39 @@ class ForgotPasswordView(FormView):
     success_url = 'verify_otp'
 
     def form_valid(self, form):
-        email = form.cleaned_data['email']
-        result = UserApplicationService.request_password_reset(email)
+        """ 
+        This view allows users to request a password reset by providing their email address.
+        If the email is associated with a user, an OTP (One-Time Password) is generated and sent to that email.
+        """
 
-        if result["success"]:    # If successful, generate and send OTP, then redirect
-            UserApplicationService.generate_and_send_otp(self.request, email)
-            self.request.session['reset_email'] = email
-            messages.success(self.request, "OTP has been sent to your email.")
-            logger.info(f"OTP requested for email: {email}")
-            return redirect(self.get_success_url())
-        else:
-            messages.error(self.request, result["error_message"])  # If user with this email does not exist, return error message
-            logger.warning(f"Failed to request password reset for email {email}: {result['error_message']}")
+        email = form.cleaned_data['email']
+        try:
+            result = UserApplicationService.request_password_reset(email)
+
+            if result["success"]:    # If successful, generate and send OTP, then redirect
+                UserApplicationService.generate_and_send_otp(self.request, email)
+                self.request.session['reset_email'] = email
+                messages.success(self.request, "OTP has been sent to your email.")
+                logger.info(f"OTP requested for email: {email}")
+                return redirect(self.get_success_url())
+            else:
+                messages.error(self.request, result["error_message"])  # If user with this email does not exist, return error message
+                logger.warning(f"Failed to request password reset for email {email}: {result['error_message']}")
+                return self.form_invalid(form)
+            
+        except Exception as e:
+            # Catch any unexpected errors and log them
+            logger.error(f"An error occurred while processing password reset request for email {email}: {str(e)}")
+            messages.error(self.request, "An error occurred while processing your request. Please try again later.")
             return self.form_invalid(form)
+        
+    def form_invalid(self, form):
+        """ 
+        Handles invalid form submissions. Logs form errors and renders the form with error messages.
+            
+        """
+        logger.warning(f"Form invalid: {form.errors}")
+        return self.render_to_response({'form': form})
 
 
 class OTPVerificationView(FormView):
@@ -134,19 +161,34 @@ class OTPVerificationView(FormView):
     success_url = 'reset_password'
 
     def form_valid(self, form):
+        """
+        verified with OTP and if User entered OTP was verified than redirect to reset page
+        
+        """
         otp = form.cleaned_data['otp']
         email = self.request.session.get('reset_email')
-        verify=UserApplicationService.verify_otp(self.request,email, otp)
-        if email and verify:
-            messages.success(self.request, "OTP Verified successfully!")
-            logger.info(f"OTP verified successfully for email {email}")
-            return redirect(self.get_success_url())  
-        else:
-            messages.error(self.request, "Invalid OTP. Please try again.")
-            logger.warning(f"Invalid OTP for email {email}")
-            return redirect('verify_otp')
+        try:
+            verify=UserApplicationService.verify_otp(self.request,email, otp)
+            if email and verify:
+                self.request.session['otp_verified'] = True
+                messages.success(self.request, "OTP Verified successfully!")
+                logger.info(f"OTP verified successfully for email {email}")
+                return redirect(self.get_success_url())  
+            else:
+                messages.error(self.request, "Invalid OTP. Please try again.")
+                logger.warning(f"Invalid OTP for email {email}")
+                return redirect('verify_otp')
+            
+        except Exception as e:
+            # Handle any unexpected errors during OTP verification
+            logger.error(f"Error occurred during OTP verification for email {email}: {str(e)}")
+            messages.error(self.request, "An error occurred while verifying the OTP. Please try again later.")
+            return self.form_invalid(form)
         
-    def form_invalid(self, form):     # Optional: Handle form invalid case if needed
+    def form_invalid(self, form):     
+        """ 
+        Handles invalid form submissions. Logs form errors and renders the form with error messages.
+        """
         messages.error(self.request, "OTP must be in digits")
         return self.render_to_response({'form': form})
             
@@ -156,15 +198,43 @@ class ResetPasswordView(FormView):
     form_class = ResetPasswordForm
     success_url = '/login/'
 
+    def dispatch(self, request, *args, **kwargs):
+        # Check if OTP is verified before allowing access to the reset password page
+        if not request.session.get('reset_email'):
+            messages.error(request, "You must generate an OTP to access this page.")
+            return redirect('forgot_password')
+
+        # Check if OTP has been successfully verified (otp_verified in session)
+        if not request.session.get('otp_verified', False):
+            messages.error(request, "You need to verify the OTP first.")
+            return redirect('verify_otp')  # Redirect to OTP verification page
+
+        return super().dispatch(request, *args, **kwargs)  
+
     def form_valid(self, form):
         new_password = form.cleaned_data['new_password']
         email = self.request.session.get('reset_email')
-        if email:
-            UserApplicationService.reset_password(email, new_password)
-            logger.info(f"Password reset successfully for email {email}")
-            messages.success(self.request, "Password reset successfully.")
-            return redirect(self.get_success_url()) 
-        else:
-            messages.error(self.request, "An error occurred.")
-            logger.error(f"Password reset failed for email {email}")
+        try:
+
+            if email:
+                UserApplicationService.reset_password(email, new_password)
+                logger.info(f"Password reset successfully for email {email}")
+                messages.success(self.request, "Password reset successfully.")
+                return redirect(self.get_success_url()) 
+            else:
+                messages.error(self.request, "An error occurred.")
+                logger.error(f"Password reset failed for email {email}")
+                return self.form_invalid(form)
+            
+        except Exception as e:
+            logger.error(f"Error occurred while resetting password for email {email}: {str(e)}")
+            messages.error(self.request, "An error occurred while resetting your password. Please try again later.")
             return self.form_invalid(form)
+        
+    def form_invalid(self, form):     
+        """ 
+        Handles invalid form submissions. Logs form errors and renders the form with error messages.
+        """
+        return self.render_to_response({'form': form})
+
+            
