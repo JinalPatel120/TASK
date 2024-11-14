@@ -11,6 +11,9 @@ from datetime import timedelta,datetime
 from django.contrib.auth.hashers import make_password,check_password
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
+import logging
+
+logger = logging.getLogger('shopping_site')
 
     
 class UserApplicationService:
@@ -74,18 +77,18 @@ class UserApplicationService:
             if check_password(password, user.password):
                 return user
             else:
-                print("Invalid password")
+                
                 return None
         except User.DoesNotExist:
-            print("User not found")
-        return None
+            return None
+      
 
     @staticmethod
     def request_password_reset(email):
         try:
             # Attempt to retrieve the user by email
-            User.objects.get(email=email)
-            return {"success": True}  # User found
+            UserServices.get_user_by_email(email=email)
+            return {"success": True}  
         except User.DoesNotExist:
             # Return a dictionary indicating failure
             return {"success": False, "error_message": "User with this email does not exist. please Register First !"}
@@ -110,25 +113,25 @@ class UserApplicationService:
             user = User.objects.get(email=email)
             
             # Check if an OTP entry already exists for the user
-            otp_record, created = OTP.objects.update_or_create(
+            OTP.objects.update_or_create(
                 user=user,
                 defaults={
                     'otp': otp,
                     'expiration_time': expiration_time,
-                    'created_at': timezone.now()  # Update created_at to current time
+                    'created_at': timezone.now() 
                 }
             )
             
       
         except User.DoesNotExist:
-            print(f"User with email {email} does not exist.")
+            logger.error(f"User with email {email} does not exist.")
 
 
 
     @staticmethod
-    def verify_otp(request, email, otp):
+    def verify_otp(email, otp):
         try:
-            user = User.objects.get(email=email)
+            user = UserServices.get_user_by_email(email=email)
            
             otp_record = OTP.objects.filter(user=user).order_by('-created_at').first()
 
@@ -141,7 +144,7 @@ class UserApplicationService:
 
     @staticmethod
     def reset_password(email, new_password):
-        user = User.objects.get(email=email)
+        user = UserServices.get_user_by_email(email=email)
         hashed_password = make_password(new_password)
         user.password = hashed_password
         user.save()

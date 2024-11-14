@@ -1,4 +1,4 @@
-from django.shortcuts import redirect
+from django.shortcuts import redirect,render
 from django.contrib.auth import login
 from django.views.generic.edit import FormView
 from django.core.exceptions import ValidationError
@@ -7,6 +7,7 @@ from .forms import RegistrationForm,UserLoginForm,ForgotPasswordForm,ResetPasswo
 from shopping_site.application.authentication.services import UserApplicationService 
 from django.contrib import messages
 import logging
+from django.views.generic import TemplateView
 
 logger = logging.getLogger('shopping_site')
 
@@ -68,7 +69,8 @@ class RegisterView(FormView):
 class LoginView(FormView):
     form_class = UserLoginForm
     template_name = 'login.html'
-    success_url = 'register'
+    success_url='product_page'
+   
 
     def form_valid(self, form):
         """
@@ -88,7 +90,7 @@ class LoginView(FormView):
             if user:
                 logger.info(f"Authentication successful for user: {username}")  
                 login(self.request, user)
-                return redirect(self.success_url)  
+                return redirect(self.get_success_url())
             else:
                 logger.warning(f"Authentication failed for username: {username}")  # Log failed authentication
                 messages.error(self.request, "Invalid username or password.")
@@ -160,6 +162,13 @@ class OTPVerificationView(FormView):
     form_class = OTPVerificationForm
     success_url = 'reset_password'
 
+    def dispatch(self, request, *args, **kwargs):
+        # Check if OTP is verified before allowing access to the reset password page
+        if not request.session.get('reset_email'):
+            messages.error(request, "You must generate an OTP to access this page.")
+            return redirect('forgot_password')
+        return super().dispatch(request, *args, **kwargs)  
+
     def form_valid(self, form):
         """
         verified with OTP and if User entered OTP was verified than redirect to reset page
@@ -182,16 +191,22 @@ class OTPVerificationView(FormView):
         except Exception as e:
             # Handle any unexpected errors during OTP verification
             logger.error(f"Error occurred during OTP verification for email {email}: {str(e)}")
-            messages.error(self.request, "An error occurred while verifying the OTP. Please try again later.")
             return self.form_invalid(form)
         
     def form_invalid(self, form):     
         """ 
         Handles invalid form submissions. Logs form errors and renders the form with error messages.
         """
-        messages.error(self.request, "OTP must be in digits")
+        for field, errors in form.errors.items():
+            for error in errors:
+                # Pass the error message dynamically based on the form field
+                messages.error(self.request, f"{field.capitalize()}: {error}")
+        
         return self.render_to_response({'form': form})
-            
+  
+class ProductPageView(TemplateView):
+    template_name = 'product_page.html'
+
 
 class ResetPasswordView(FormView):
     template_name = 'reset_password.html'
@@ -220,6 +235,7 @@ class ResetPasswordView(FormView):
                 UserApplicationService.reset_password(email, new_password)
                 logger.info(f"Password reset successfully for email {email}")
                 messages.success(self.request, "Password reset successfully.")
+                self.request.session.flush() 
                 return redirect(self.get_success_url()) 
             else:
                 messages.error(self.request, "An error occurred.")

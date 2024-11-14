@@ -110,8 +110,7 @@ class OTPVerificationForm(forms.Form):
             'required': 'Please enter the OTP to proceed.'  
         })
 
-    if not otp:
-        raise ValidationError('This field is required.')
+ 
     
     def clean_otp(self):
         otp = self.cleaned_data.get('otp')
@@ -124,7 +123,6 @@ class OTPVerificationForm(forms.Form):
         
         if len(otp) != 6:
             raise forms.ValidationError("OTP must be exactly 6 digits long.")
-
         return otp
     
 

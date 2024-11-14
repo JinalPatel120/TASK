@@ -8,8 +8,9 @@
 </head>
 <body>
     <div class="container mt-5">
+        <h2>Verify OTP</h2>
         {% if messages %}
-                <ul class="messages">
+               
                     {% for message in messages %}
                         {% if message.level == 40 %} <!-- Error message -->
                             <li class="alert alert-danger">{{ message }}</li>
@@ -19,22 +20,17 @@
                             <li class="alert alert-info">{{ message }}</li> 
                         {% endif %}
                     {% endfor %}
-                </ul>
+            
             {% endif %}
-        <h2>Verify OTP</h2>
+       
 
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            
-            
-
             <button type="submit" class="btn btn-primary">Verify</button>
             <button class="btn btn-secondary">
                 <a href="{% url 'forgot_password' %}" style="color: white; text-decoration: none;">Back</a>
             </button>
-            
-         
         </form>
     </div>
 

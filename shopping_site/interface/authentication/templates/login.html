@@ -14,12 +14,18 @@
 
         <!-- Display Django messages -->
         {% if messages %}
-            <div class="alert alert-danger">
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
+     
+            {% for message in messages %}
+                {% if message.level == 40 %} <!-- Error message -->
+                    <li class="alert alert-danger">{{ message }}</li>
+                {% elif message.level == 25 %} <!-- Success message -->
+                    <li class="alert alert-success">{{ message }}</li>
+                {% else %}
+                    <li class="alert alert-info">{{ message }}</li> <!-- Other types of messages -->
+                {% endif %}
+            {% endfor %}
+      
+    {% endif %}
 
         <form method="POST" action="{% url 'login' %}">
             {% csrf_token %}
