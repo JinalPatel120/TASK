@@ -14,6 +14,10 @@ from pathlib import Path
 import os
 import glob
 from dotenv import load_dotenv
+from datetime import date, timedelta
+from shopping_site.infrastructure.logger.services import CounterLogFormatter,CustomizedJSONFormatter
+from logging_utilities.formatters.extra_formatter import ExtraFormatter
+import logging.config
 
 load_dotenv()
 
@@ -32,17 +36,23 @@ SECRET_KEY = 'django-insecure-7e-^$ydu##sdoju#3_pgxuj!zevw6y31nt*v750^4x_)m6luyt
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.getenv("DEBUG", 0)))
+
+DEBUG=True
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
 
 # Application definition
 
-INSTALLED_APPS = [
+SYSTEM_APPS=[
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+]
+
+USER_APPS=[
     'shopping_site.domain.authentication',
     'shopping_site.domain.cart_item',
     'shopping_site.domain.order',
@@ -50,7 +60,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'widget_tweaks',
+
 ]
+
+INSTALLED_APPS = SYSTEM_APPS + USER_APPS
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -59,10 +74,12 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-  
-    # 'shopping_site.infrastructure.middleware.SqlLoggerMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware'
 ]
+# if DEBUG:
+#     MIDDLEWARE.append('shopping_site.infrastructure.middleware.SqlLoggerMiddleware')
+
+
 
 ROOT_URLCONF = 'shopping_site.urls'
 
@@ -147,37 +164,136 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'standard': {
+#             'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#         },
+#     },
+#     'handlers': {
+#         'file': {
+#             'level': 'DEBUG', 
+#             'class': 'logging.FileHandler',
+#             'filename': os.path.join(BASE_DIR, 'django_app.log'),
+#             'formatter': 'standard',
+#         },
+#         'console': {
+#             'level': 'INFO', 
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'standard',
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console', 'file'], 
+#             'level': 'INFO',  
+#             'propagate': True,
+#         },
+#         'shopping_site': {  
+#             'handlers': ['console', 'file'],
+#             'level': 'INFO',  
+#             'propagate': False,
+#         },
+#     },
+# }
+
+
+
+
+
+from datetime import date, timedelta
+
+log_base_dir = "logs"
+
+# Define the subdirectories where logs will be stored
+log_subdirs = ["debug", "info", "warning", "error", "db_query"]
+
+# Create the log directories if they don't exist
+for subdir in log_subdirs:
+    log_path = os.path.join(log_base_dir, subdir)
+    os.makedirs(log_path, exist_ok=True)
+
+
+LOGGER_HANDLERS = os.getenv(
+    "LOGGER_HANDLERS",
+    [
+        "debug_file",
+        "info_file",
+        "warn_file",
+        "error_file",
+        "console"
+    ],
+).split(",")
+
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'standard': {
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": CustomizedJSONFormatter,
+        },
+        "app": {
+            "()": ExtraFormatter,
+            "format": 'level: "%(levelname)s"\t msg: "%(message)s"\t logger: "%(name)s"\t func: "%(funcName)s"\t time: "%(asctime)s"',
+            "datefmt": "%Y-%m-%dT%H:%M:%S.%z",
+            "extra_fmt": "\t extra: %s",
+        },
+        "simple_string": {
+            "format": "%(levelname)s %(asctime)s %(message)s\n",
+            "datefmt": "%Y-%m-%dT%H:%M:%S.%z",
+        },
+        "custom_format_with_counter": {
+            "()": CounterLogFormatter,
         },
     },
-    'handlers': {
-        'file': {
-            'level': 'DEBUG', 
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'django_app.log'),
-            'formatter': 'standard',
+    "handlers": {
+        "debug_file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": f"logs/debug/{date.today()}_logger.log",
+            "formatter": "json",
         },
-        'console': {
-            'level': 'INFO', 
-            'class': 'logging.StreamHandler',
-            'formatter': 'standard',
+        "info_file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": f"logs/info/{date.today()}_info.log",
+            "formatter": "json",
+        },
+        "warn_file": {
+            "level": "WARNING",
+            "class": "logging.FileHandler",
+            "filename": f"logs/warning/{date.today()}_warn.log",
+            "formatter": "json",
+        },
+        "error_file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": f"logs/error/{date.today()}_error.log",
+            "formatter": "json",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+        "db_query_file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "formatter": "custom_format_with_counter",
+            "filename": f"logs/db_query/{date.today()}_debug.log",
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'], 
-            'level': 'INFO',  
-            'propagate': True,
+    "loggers": {
+        "": {
+            "handlers": LOGGER_HANDLERS,
+            "level": "DEBUG",
+            "propagate": False,
         },
-        'shopping_site': {  
-            'handlers': ['console', 'file'],
-            'level': 'INFO',  
-            'propagate': False,
+        "django.db.backends": {
+            "handlers": ["db_query_file"],
+            "level": "DEBUG",
+            "propagate": False,
         },
     },
 }

@@ -57,7 +57,6 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     objects = CustomUserManager()
-    is_active = None
     is_staff = None
     last_login = None
     is_superuser = None

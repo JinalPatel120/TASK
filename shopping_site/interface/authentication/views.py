@@ -2,14 +2,16 @@ from django.shortcuts import redirect,render
 from django.contrib.auth import login
 from django.views.generic.edit import FormView
 from django.core.exceptions import ValidationError
-from django.http import HttpResponseServerError
+from django.http import HttpResponseServerError,HttpResponseRedirect
 from .forms import RegistrationForm,UserLoginForm,ForgotPasswordForm,ResetPasswordForm,OTPVerificationForm
 from shopping_site.application.authentication.services import UserApplicationService 
 from django.contrib import messages
-import logging
 from django.views.generic import TemplateView
+from shopping_site.infrastructure.logger.models import logger
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
 
-logger = logging.getLogger('shopping_site')
+
 
 class RegisterView(FormView):
     """
@@ -35,8 +37,9 @@ class RegisterView(FormView):
                 "last_name": cleaned_data.get('last_name')
             }
 
-            # Use the UserApplicationService to register a new user
-            user = UserApplicationService.register_user(user_data)
+            user_service = UserApplicationService(log=logger)
+            user = user_service.register_user(user_data)
+            # user = UserApplicationService(log=self.log).register_user(self,user_data)
             if isinstance(user, str):
                 # If the result is an error message (string), return it
                 if 'email' in user:
@@ -47,17 +50,16 @@ class RegisterView(FormView):
             # Log in the user after successful registration
             login(self.request, user)
 
-            # Return success response (redirects to the home page)
             messages.success(self.request,'User Register Successfully !')
-            logger.info(f"User registered and logged in: {cleaned_data['username']}")
+         
             return redirect(self.success_url)
 
         except ValidationError as e:
-            logger.error(f"Validation error during registration: {str(e)}")
+       
             return self.form_invalid(form)
 
         except Exception as e:
-            logger.error(f"Unexpected error during registration: {str(e)}")
+        
             return HttpResponseServerError(f"An error occurred: {str(e)}")
 
     def form_invalid(self, form):
@@ -71,28 +73,33 @@ class LoginView(FormView):
     template_name = 'login.html'
     success_url='product_page'
    
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            messages.info(request, "You are already logged in.")
+            return redirect(self.success_url)
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         """
         Handles the valid form submission. Attempts to authenticate the user based on the provided
         username and password."""
-         
+
         username = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
-        logger.info(f"Login attempt with username: {username}")  
+       
 
         try:
             credentials = {
                 'username': username,
                 'password': password
             }
-            user = UserApplicationService.login_user(credentials,self.request)       
+            user_service = UserApplicationService(log=logger)
+            user = user_service.login_user(credentials,self.request)
+               
             if user:
-                logger.info(f"Authentication successful for user: {username}")  
                 login(self.request, user)
                 return redirect(self.get_success_url())
             else:
-                logger.warning(f"Authentication failed for username: {username}")  # Log failed authentication
                 messages.error(self.request, "Invalid username or password.")
                 return self.form_invalid(form)
         
@@ -116,6 +123,17 @@ class LoginView(FormView):
         
         return self.render_to_response({'form': form})
 
+class ProductPageView(TemplateView):
+    template_name = 'product_page.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to view this page.")
+            return redirect('login')  
+        return super().dispatch(request, *args, **kwargs)
+
+
+
 class ForgotPasswordView(FormView):
     template_name = 'forgot_password.html'
     form_class = ForgotPasswordForm
@@ -129,10 +147,11 @@ class ForgotPasswordView(FormView):
 
         email = form.cleaned_data['email']
         try:
-            result = UserApplicationService.request_password_reset(email)
-
+            user_service = UserApplicationService(log=logger)
+            result = user_service.request_password_reset(email)
+          
             if result["success"]:    # If successful, generate and send OTP, then redirect
-                UserApplicationService.generate_and_send_otp(self.request, email)
+                user_service.generate_and_send_otp(self.request, email)
                 self.request.session['reset_email'] = email
                 messages.success(self.request, "OTP has been sent to your email.")
                 logger.info(f"OTP requested for email: {email}")
@@ -143,8 +162,8 @@ class ForgotPasswordView(FormView):
                 return self.form_invalid(form)
             
         except Exception as e:
-            # Catch any unexpected errors and log them
-            logger.error(f"An error occurred while processing password reset request for email {email}: {str(e)}")
+            
+            logger.error(f"An error occurred while processing password reset request for email {email}: {str(e)}") # Catch any unexpected errors and log them
             messages.error(self.request, "An error occurred while processing your request. Please try again later.")
             return self.form_invalid(form)
         
@@ -177,7 +196,9 @@ class OTPVerificationView(FormView):
         otp = form.cleaned_data['otp']
         email = self.request.session.get('reset_email')
         try:
-            verify=UserApplicationService.verify_otp(self.request,email, otp)
+            user_service = UserApplicationService(log=logger)
+   
+            verify=user_service.verify_otp(email, otp)
             if email and verify:
                 self.request.session['otp_verified'] = True
                 messages.success(self.request, "OTP Verified successfully!")
@@ -204,9 +225,8 @@ class OTPVerificationView(FormView):
         
         return self.render_to_response({'form': form})
   
-class ProductPageView(TemplateView):
-    template_name = 'product_page.html'
 
+    
 
 class ResetPasswordView(FormView):
     template_name = 'reset_password.html'
@@ -232,7 +252,8 @@ class ResetPasswordView(FormView):
         try:
 
             if email:
-                UserApplicationService.reset_password(email, new_password)
+                user_service = UserApplicationService(log=logger)
+                user_service.reset_password(email, new_password)
                 logger.info(f"Password reset successfully for email {email}")
                 messages.success(self.request, "Password reset successfully.")
                 self.request.session.flush() 
