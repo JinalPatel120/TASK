@@ -33,7 +33,8 @@ class CustomUserManager(BaseUserManager):
         """
         Create and return a superuser with an email, password, and other required fields.
         """
-    
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
 
         return self.create_user(username, email, password, **extra_fields)
 
@@ -56,12 +57,13 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = CustomUserManager()
-    is_staff = None
-    last_login = None
-    is_superuser = None
+
+    last_login=None
+    is_staff=None
     date_joined=None
 
+
+ 
     class Meta:
         db_table = "user"
         

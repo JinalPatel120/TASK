@@ -8,9 +8,6 @@ from shopping_site.application.authentication.services import UserApplicationSer
 from django.contrib import messages
 from django.views.generic import TemplateView
 from shopping_site.infrastructure.logger.models import logger
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-
 
 
 class RegisterView(FormView):
@@ -39,7 +36,6 @@ class RegisterView(FormView):
 
             user_service = UserApplicationService(log=logger)
             user = user_service.register_user(user_data)
-            # user = UserApplicationService(log=self.log).register_user(self,user_data)
             if isinstance(user, str):
                 # If the result is an error message (string), return it
                 if 'email' in user:
@@ -47,8 +43,8 @@ class RegisterView(FormView):
                 elif 'username' in user:
                     form.add_error('username', user)
                 return self.form_invalid(form)
-            # Log in the user after successful registration
-            login(self.request, user)
+         
+          
 
             messages.success(self.request,'User Register Successfully !')
          
@@ -97,7 +93,6 @@ class LoginView(FormView):
             user = user_service.login_user(credentials,self.request)
                
             if user:
-                login(self.request, user)
                 return redirect(self.get_success_url())
             else:
                 messages.error(self.request, "Invalid username or password.")

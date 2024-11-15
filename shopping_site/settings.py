@@ -15,7 +15,10 @@ import os
 import glob
 from dotenv import load_dotenv
 from datetime import date, timedelta
-from shopping_site.infrastructure.logger.services import CounterLogFormatter,CustomizedJSONFormatter
+from shopping_site.infrastructure.logger.services import (
+    CounterLogFormatter,
+    CustomizedJSONFormatter,
+)
 from logging_utilities.formatters.extra_formatter import ExtraFormatter
 import logging.config
 
@@ -24,82 +27,83 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-interface_templates_dir = os.path.join(BASE_DIR, 'shopping_site', 'interface')
-template_dirs = glob.glob(os.path.join(interface_templates_dir, '**', 'templates'), recursive=True)
+interface_templates_dir = os.path.join(BASE_DIR, "shopping_site", "interface")
+template_dirs = glob.glob(
+    os.path.join(interface_templates_dir, "**", "templates"), recursive=True
+)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
-SECRET_KEY = 'django-insecure-7e-^$ydu##sdoju#3_pgxuj!zevw6y31nt*v750^4x_)m6luyt'
+SECRET_KEY = "django-insecure-7e-^$ydu##sdoju#3_pgxuj!zevw6y31nt*v750^4x_)m6luyt"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.getenv("DEBUG", 0)))
 
-DEBUG=True
+DEBUG = True
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
 
 # Application definition
 
-SYSTEM_APPS=[
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-
+SYSTEM_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
 ]
 
-USER_APPS=[
-    'shopping_site.domain.authentication',
-    'shopping_site.domain.cart_item',
-    'shopping_site.domain.order',
-    'shopping_site.domain.product',
-    'rest_framework',
-    'drf_yasg',
-    'widget_tweaks',
-
+USER_APPS = [
+    "shopping_site.domain.authentication",
+    "shopping_site.domain.cart_item",
+    "shopping_site.domain.order",
+    "shopping_site.domain.product"
 ]
 
-INSTALLED_APPS = SYSTEM_APPS + USER_APPS
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "drf_yasg",
+    "widget_tweaks",
+]
 
+INSTALLED_APPS = SYSTEM_APPS + USER_APPS + THIRD_PARTY_APPS
 
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware'
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 # if DEBUG:
 #     MIDDLEWARE.append('shopping_site.infrastructure.middleware.SqlLoggerMiddleware')
 
 
-
-ROOT_URLCONF = 'shopping_site.urls'
+ROOT_URLCONF = "shopping_site.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS':  [BASE_DIR,*template_dirs],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR, *template_dirs],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'shopping_site.drivers.wsgi.application'
+WSGI_APPLICATION = "shopping_site.drivers.wsgi.application"
 
 
 # Database
@@ -107,7 +111,7 @@ WSGI_APPLICATION = 'shopping_site.drivers.wsgi.application'
 
 DATABASES = {
     "default": {
-       "ENGINE": 'django.db.backends.postgresql',
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME"),
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
@@ -116,31 +120,31 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'authentication.User'
+AUTH_USER_MODEL = "authentication.User"
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -149,19 +153,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = os.getenv('EMAIL_PORT')
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS')
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 
 # LOGGING = {
@@ -174,33 +178,30 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 #     },
 #     'handlers': {
 #         'file': {
-#             'level': 'DEBUG', 
+#             'level': 'DEBUG',
 #             'class': 'logging.FileHandler',
 #             'filename': os.path.join(BASE_DIR, 'django_app.log'),
 #             'formatter': 'standard',
 #         },
 #         'console': {
-#             'level': 'INFO', 
+#             'level': 'INFO',
 #             'class': 'logging.StreamHandler',
 #             'formatter': 'standard',
 #         },
 #     },
 #     'loggers': {
 #         'django': {
-#             'handlers': ['console', 'file'], 
-#             'level': 'INFO',  
+#             'handlers': ['console', 'file'],
+#             'level': 'INFO',
 #             'propagate': True,
 #         },
-#         'shopping_site': {  
+#         'shopping_site': {
 #             'handlers': ['console', 'file'],
-#             'level': 'INFO',  
+#             'level': 'INFO',
 #             'propagate': False,
 #         },
 #     },
 # }
-
-
-
 
 
 from datetime import date, timedelta
@@ -218,13 +219,7 @@ for subdir in log_subdirs:
 
 LOGGER_HANDLERS = os.getenv(
     "LOGGER_HANDLERS",
-    [
-        "debug_file",
-        "info_file",
-        "warn_file",
-        "error_file",
-        "console"
-    ],
+    ["debug_file", "info_file", "warn_file", "error_file", "console"],
 ).split(",")
 
 LOGGING = {

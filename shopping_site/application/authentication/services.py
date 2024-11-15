@@ -69,29 +69,6 @@ class UserApplicationService:
         self.log.info(f"User {username} registered successfully.")
         return user
 
-
-    # def login_user(self,credentials: dict,request) -> Optional[dict]:
-    #     username = credentials.get("username")
-    #     password = credentials.get("password")
-    #     try:
-    #         if not username or not password:
-    #             self.log.warning(f"Login failed: Missing username or password.")
-    #             raise ValidationError("Both fields are required.")
-    #         user = UserServices.get_user_by_username(username=username)
-            
-    #         # Use check_password to compare the entered password with the hashed password
-    #         if check_password(password, user.password):
-    #             self.log.info(f"User {username} logged in successfully.")
-    #             return user
-    #         else:
-    #             self.log.warning(f"Login failed: Incorrect password for user {username}.")
-    #             return None
-    #     except User.DoesNotExist:
-    #         self.log.error(f"Login failed: User with username {username} does not exist.")
-    #         return None
-      
-
-
     def login_user(self, credentials: dict, request) -> Optional[User]:
         username = credentials.get("username")
         password = credentials.get("password")
