@@ -144,10 +144,24 @@ class ForgotPasswordView(FormView):
         try:
             user_service = UserApplicationService(log=logger)
             result = user_service.request_password_reset(email)
+<<<<<<< Updated upstream
           
             if result["success"]:    # If successful, generate and send OTP, then redirect
                 user_service.generate_and_send_otp(self.request, email)
                 self.request.session['reset_email'] = email
+=======
+
+            if result["success"]:
+                # Generate JWT token for the user with email and expiration time
+                expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)  # 10 minutes expiration
+                payload = {"email": email, "exp": expiration_time}
+                token = jwt.encode(payload, "jinal123", algorithm="HS256")
+
+                # Send OTP to the email and include the token
+                user_service.generate_and_send_otp(self.request, email,token)
+                self.request.session['reset_token'] = token
+                logger.info(f"Token {token} for {email} stored in session.")
+>>>>>>> Stashed changes
                 messages.success(self.request, "OTP has been sent to your email.")
                 logger.info(f"OTP requested for email: {email}")
                 return redirect(self.get_success_url())
@@ -229,10 +243,18 @@ class ResetPasswordView(FormView):
     success_url = '/login/'
 
     def dispatch(self, request, *args, **kwargs):
+<<<<<<< Updated upstream
         # Check if OTP is verified before allowing access to the reset password page
         if not request.session.get('reset_email'):
             messages.error(request, "You must generate an OTP to access this page.")
             return redirect('forgot_password')
+=======
+        token = request.session.get("reset_token") 
+
+        if not token:
+            messages.error(request, "generate otp and verify first !")
+            return redirect("forgot_password")
+>>>>>>> Stashed changes
 
         # Check if OTP has been successfully verified (otp_verified in session)
         if not request.session.get('otp_verified', False):

@@ -5,6 +5,7 @@ from typing import List, Any, Dict
 logger = logging.getLogger(__name__)
 
 
+
 class AttributeLogger:
     """
     The AttributeLogger is a logging helper class that stores a set of
@@ -19,6 +20,7 @@ class AttributeLogger:
         self.logger = logger
         self.attributes = attr
 
+    def getAttributeLogger(modules:Module)
     def info(self, msg, *args, **kwargs):
         kwargs["extra"] = self.attributes
         kwargs["stacklevel"] = 2
