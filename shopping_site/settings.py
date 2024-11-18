@@ -20,7 +20,9 @@ from shopping_site.infrastructure.logger.services import (
     CustomizedJSONFormatter,
 )
 from logging_utilities.formatters.extra_formatter import ExtraFormatter
+import logging
 import logging.config
+
 
 load_dotenv()
 
@@ -168,42 +170,6 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
 
-# LOGGING = {
-#     'version': 1,
-#     'disable_existing_loggers': False,
-#     'formatters': {
-#         'standard': {
-#             'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#         },
-#     },
-#     'handlers': {
-#         'file': {
-#             'level': 'DEBUG',
-#             'class': 'logging.FileHandler',
-#             'filename': os.path.join(BASE_DIR, 'django_app.log'),
-#             'formatter': 'standard',
-#         },
-#         'console': {
-#             'level': 'INFO',
-#             'class': 'logging.StreamHandler',
-#             'formatter': 'standard',
-#         },
-#     },
-#     'loggers': {
-#         'django': {
-#             'handlers': ['console', 'file'],
-#             'level': 'INFO',
-#             'propagate': True,
-#         },
-#         'shopping_site': {
-#             'handlers': ['console', 'file'],
-#             'level': 'INFO',
-#             'propagate': False,
-#         },
-#     },
-# }
-
-
 from datetime import date, timedelta
 
 log_base_dir = "logs"
@@ -292,3 +258,119 @@ LOGGING = {
         },
     },
 }
+
+
+
+
+# LOG_DIR = "logs"
+# os.makedirs(LOG_DIR, exist_ok=True)
+
+
+
+# LOGGER_HANDLERS = os.getenv(
+#     "LOGGER_HANDLERS", 
+#     "debug_file,info_file,warning_file,error_file,console"
+# ).split(",")
+
+# MODULES = ["authentication", "order", "product", "cart_item"]
+
+
+# def get_module_handlers(module_name):
+#     log_dir = f"logs/{module_name}"
+#     os.makedirs(f"{log_dir}/debug", exist_ok=True)
+#     os.makedirs(f"{log_dir}/info", exist_ok=True)
+#     os.makedirs(f"{log_dir}/warning", exist_ok=True)
+#     os.makedirs(f"{log_dir}/error", exist_ok=True)
+
+#     return {
+#         f"{module_name}_debug_file": {
+#             "level": "DEBUG",
+#             "class": "logging.FileHandler",
+#             "filename": f"{log_dir}/debug/{date.today()}_{module_name}_debug.log",
+#             "formatter": "json", 
+#         },
+#         f"{module_name}_info_file": {
+#             "level": "INFO",
+#             "class": "logging.FileHandler",
+#             "filename": f"{log_dir}/info/{date.today()}_{module_name}_info.log",
+#             "formatter": "json",
+#         },
+#         f"{module_name}_warn_file": {
+#             "level": "WARNING",
+#             "class": "logging.FileHandler",
+#             "filename": f"{log_dir}/warning/{date.today()}_{module_name}_warn.log",
+#             "formatter": "json",
+#         },
+#         f"{module_name}_error_file": {
+#             "level": "ERROR",
+#             "class": "logging.FileHandler",
+#             "filename": f"{log_dir}/error/{date.today()}_{module_name}_error.log",
+#             "formatter": "json",
+#         },
+#         f"{module_name}_console": {
+#             "class": "logging.StreamHandler",
+#             "formatter": "json", 
+#         },
+#     }
+
+
+# loggers = {}
+
+
+# handlers = {}
+
+
+# for module in MODULES:
+#     handlers.update(get_module_handlers(module))
+
+
+
+
+# formatters = {
+#     "json": {
+#         "()": CustomizedJSONFormatter, 
+#     },
+#     "app": {
+#         "()": ExtraFormatter,  
+#         "format": 'level: "%(levelname)s"\t msg: "%(message)s"\t logger: "%(name)s"\t func: "%(funcName)s"\t time: "%(asctime)s"',
+#         "datefmt": "%Y-%m-%dT%H:%M:%S.%z",
+#         "extra_fmt": "\t extra: %s",
+#     },
+#     "simple_string": {
+#         "format": "%(levelname)s %(asctime)s %(message)s\n",
+#         "datefmt": "%Y-%m-%dT%H:%M:%S.%z",
+#     },
+#     "custom_format_with_counter": {
+#         "()": CounterLogFormatter, 
+#     },
+  
+# }
+
+# for module in MODULES:
+#     loggers[module] = {
+#         "handlers": [
+#             f"{module}_debug_file",
+#             f"{module}_info_file",
+#             f"{module}_warn_file",
+#             f"{module}_error_file",
+#             f"{module}_console"
+#         ],
+#         "level": "DEBUG",  
+#         "propagate": False,
+#     }
+
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "formatters": formatters,
+#     "handlers": handlers,
+#     "loggers": loggers,
+# }
+
+# logging.config.dictConfig(LOGGING)
+
+
+
+
+
+

@@ -5,33 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify OTP</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .btn-disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
         <h2>Verify OTP</h2>
-        {% if messages %}
-               
-                    {% for message in messages %}
-                        {% if message.level == 40 %} <!-- Error message -->
-                            <li class="alert alert-danger">{{ message }}</li>
-                        {% elif message.level == 25 %} <!-- Success message -->
-                            <li class="alert alert-success">{{ message }}</li>
-                        {% else %}
-                            <li class="alert alert-info">{{ message }}</li> 
-                        {% endif %}
-                    {% endfor %}
-            
+
+        <ul class="list-unstyled" id="messages">
+            {% for message in messages %}
+                <li class="alert 
+                    {% if message.level == 40 %} alert-danger 
+                    {% elif message.level == 25 %} alert-success
+                    {% else %} alert-info {% endif %}">
+                    {{ message }}
+                </li>
+            {% endfor %}
+            <li id="attempt-message" class="alert alert-info" style="display: none;"></li> <!-- Hidden initially -->
+        </ul>
+
+        <div id="next-attempt-time">
+            {% if remaining_message %}
+                You can attempt again in: {{ remaining_message }}
             {% endif %}
-       
+        </div>
 
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Verify</button>
+
+            <div id="attempt-status">
+                <p id="attempt-message"></p>
+            </div>
+
+            <button id="verify-button" type="submit" class="btn btn-primary {% if is_disabled %}btn-disabled{% endif %}" {% if is_disabled %}disabled{% endif %}>
+                Verify
+            </button>
+            
             <button class="btn btn-secondary">
                 <a href="{% url 'forgot_password' %}" style="color: white; text-decoration: none;">Back</a>
             </button>
         </form>
+
+<script>
+    let countdownTime = {{ next_attempt_time_seconds|default:"30"|escapejs }}; // Get total countdown time in seconds
+
+    const verifyButton = document.getElementById("verify-button");
+    const nextAttemptTime = document.getElementById("next-attempt-time");
+    const messagesList = document.getElementById("messages");
+
+    // Function to update the countdown and button state
+    function updateCountdown() {
+        if (countdownTime > 0) {
+            let minutes = Math.floor(countdownTime / 60); // Get full minutes
+            let seconds = countdownTime % 60; // Get remaining seconds
+
+            // Show only seconds if minutes are 0
+            if (minutes > 0) {
+                nextAttemptTime.textContent = `You can attempt again in: ${minutes} minute(s) ${seconds} second(s)`;
+            } else {
+                nextAttemptTime.textContent = `You can attempt again in: ${seconds} second(s)`;
+            }
+
+            countdownTime--; // Decrease the countdown time by 1 second
+        } else {
+            // Once time runs out, just enable the button without showing the message
+            verifyButton.disabled = false;
+            verifyButton.classList.remove('btn-disabled');
+            clearInterval(countdownInterval); // Stop the countdown once time is up
+        }
+    }
+
+    // Add a new message dynamically from JavaScript (for example, after a successful OTP submission)
+    function addMessage(message, level) {
+        const li = document.createElement("li");
+        li.classList.add("alert");
+        
+        if (level === 40) {
+            li.classList.add("alert-danger");
+        } else if (level === 25) {
+            li.classList.add("alert-success");
+        } else {
+            li.classList.add("alert-info");
+        }
+        
+        li.textContent = message;
+        messagesList.appendChild(li);
+    }
+
+
+
+
+    // Start the countdown if the button is disabled
+    {% if is_disabled %}
+        const countdownInterval = setInterval(updateCountdown, 1000);
+    {% endif %}
+</script>
+
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

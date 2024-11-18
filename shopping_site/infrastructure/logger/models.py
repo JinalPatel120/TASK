@@ -2,7 +2,7 @@ import logging
 from typing import List, Any, Dict
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('authentication') 
 
 
 class AttributeLogger:

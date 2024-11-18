@@ -32,3 +32,28 @@ class SqlLoggerMiddleware(MiddlewareMixin):
         logger.info("Request Completed: %s %s", request.method, request.path)
         
         return response
+
+
+
+
+# import jwt
+# from django.conf import settings
+# from django.http import JsonResponse
+# from django.utils.deprecation import MiddlewareMixin
+# from shopping_site.infrastructure.logger.models import logger
+
+# class TokenAuthenticationMiddleware(MiddlewareMixin):
+#     def process_request(self, request):
+#         token = request.headers.get('Authorization')  # Get the token from the Authorization header
+
+#         if token is None:
+#             return JsonResponse({"error": "Authentication token is missing."}, status=401)
+
+#         try:
+#             # Decode the token to get user information
+#             decoded_payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+#             request.user_id = decoded_payload['user_id']  # Store user ID in request object
+#         except jwt.ExpiredSignatureError:
+#             return JsonResponse({"error": "Token has expired."}, status=401)
+#         except jwt.InvalidTokenError:
+#             return JsonResponse({"error": "Invalid token."}, status=401)
