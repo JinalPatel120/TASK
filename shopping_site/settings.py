@@ -47,7 +47,8 @@ SECRET_KEY = "django-insecure-7e-^$ydu##sdoju#3_pgxuj!zevw6y31nt*v750^4x_)m6luyt
 DEBUG = bool(int(os.getenv("DEBUG", 0)))
 
 DEBUG = True
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
+ALLOWED_HOSTS = ['*']
+
 
 # Application definition
 
@@ -92,6 +93,8 @@ MIDDLEWARE = [
 
 
 ROOT_URLCONF = "shopping_site.urls"
+
+SITE_URL = 'http://localhost:8000'  # Replace with your actual domain
 
 TEMPLATES = [
     {

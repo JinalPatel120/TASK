@@ -129,25 +129,31 @@ class ProductPageView(TemplateView):
            
 
 class ForgotPasswordView(FormView):
+    """
+    View to handle the forgot password process. It generates and sends an OTP to the provided email address.
+    Once the email is submitted, an OTP is sent to the user to verify their identity.
+    """
+
     template_name = "forgot_password.html"
     form_class = ForgotPasswordForm
     success_url = "verify_otp"
 
     def form_valid(self, form):
+        """
+        Handles the successful submission of the forgot password form. This method generates a token for the email,
+        sends an OTP to the user's email address, and then redirects the user to the OTP verification page.
+        """
         email = form.cleaned_data["email"]
         try:
             user_service = UserApplicationService(log=logger)
-         
-             # Generate token using the UserApplicationService
+            
+            # Generate token using the UserApplicationService
             token = user_service.generate_token(email)
-  
-
+            
             # Send OTP to the email with the token
             user_service.generate_and_send_otp(email, token)
-            self.request.session['reset_token'] = token
-            print(self.request.session.items(),'session')
-            messages.success(self.request, "OTP has been sent to your email.")
-            return redirect(self.get_success_url())
+            messages.success(self.request, "OTP has been sent to your email. Please check your inbox.")
+            return redirect("forgot_password")
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
             messages.error(self.request, "An error occurred while processing your request.")
@@ -155,35 +161,38 @@ class ForgotPasswordView(FormView):
 
 
 class OTPVerificationView(FormView):
+    """
+    View to handle OTP verification. It validates the OTP entered by the user and redirects them to the reset password page
+    if the OTP is correct.
+    """
     template_name = "verify_otp.html"
     form_class = OTPVerificationForm
     success_url = "reset_password"
 
     def dispatch(self, request, *args, **kwargs):
-        token = request.session.get('reset_token')
-        print(token,'token')
-
-        if not token:
-            print('hello')
-            messages.error(request, "You must generate an OTP to access this page.")
-            return redirect("forgot_password")
+        """
+        Handles the initial request for OTP verification. It extracts the token from the URL and decodes it to verify its validity.
+        """
+        token = request.GET.get('token')
         
+        # Ensure the token is provided in the URL
+        if not token:
+            messages.error(request, "Invalid or missing token. Please request a new OTP.")
+            return redirect("forgot_password")
+
         try:
-            print('hello1')
             user_service = UserApplicationService(log=logger)
-         
-             # Generate token using the UserApplicationService
-            payload,error_message= user_service.decode_token(token)
-   
+            payload, error_message = user_service.decode_token(token)
+            
             if not payload:
                 messages.error(request, error_message)
                 return redirect("forgot_password")
-            print('payload',payload)
+            
             email = payload.get("email")
-            print('email',email)
             if not email:
                 messages.error(request, "Invalid token.")
                 return redirect("forgot_password")
+            
             self.request.email = email
             self.request.token = token
         except jwt.ExpiredSignatureError:
@@ -196,6 +205,10 @@ class OTPVerificationView(FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        """
+        Handles the successful submission of the OTP verification form. Verifies the OTP entered by the user and, if correct,
+        redirects them to the reset password page with the token.
+        """
         otp = form.cleaned_data["otp"]
         email = self.request.email
         token = self.request.token
@@ -206,7 +219,7 @@ class OTPVerificationView(FormView):
         result = user_service.verify_otp(email, otp, token)
         if result["success"]:
             messages.success(self.request, result["message"])
-            return redirect(self.get_success_url())
+            return redirect(f"/reset_password/?token={token}") 
         else:
             messages.error(self.request, result["message"])
             return self.form_invalid(form)
@@ -216,55 +229,78 @@ class OTPVerificationView(FormView):
             return self.resend_otp(request)
         return super().get(request, *args, **kwargs)
 
+
     def resend_otp(self, request):
-        email = self.request.email
-        user_service=UserApplicationService(log=logger)
-        token = user_service.generate_token(email)
-        result = user_service.generate_and_send_otp(email, token)
+        user_service = UserApplicationService(log=logger)
+        token = request.GET.get('token', None)  
+        if not token:
+            messages.error(request, "No token found. Please try again.")
+            return redirect('verify_otp')  
+        email = user_service.get_email_from_token(token) 
 
-        if result:
-            self.request.session['reset_token'] = token
-            messages.success(request, "A new OTP has been sent to your email.")
+        if email:          
+            otp = user_service.resend_otp(email, token)  
+            if otp:
+                messages.success(request, "A new OTP has been sent to your email.")
+            else:
+                messages.error(request, "Failed to resend OTP. Please try again.")
         else:
-            messages.error(request, "Failed to resend OTP. Please try again.")
-        return redirect("verify_otp")
-
-
-
+            messages.error(request, "Invalid or expired token.")
+        
+        return redirect(f"/verify_otp/?token={token}")
+        
+        
 class ResetPasswordView(FormView):
+    """
+    View to handle the password reset process. After verifying the OTP, the user can reset their password here.
+    """
+
     template_name = "reset_password.html"
     form_class = ResetPasswordForm
     success_url = "/login/"
 
     def dispatch(self, request, *args, **kwargs):
-        token = request.session.get("reset_token") 
+        """
+        Handles the initial request for resetting the password. It extracts the token from the URL, validates it,
+        and checks if the email associated with the token exists.
+        """
+        token = request.GET.get('token')
+
+        # If token is not found in GET parameters, redirect to the forgot password page with an error
         if not token:
-            messages.error(request, "generate otp and verify first !")
+            messages.error(request, "Invalid or missing token. Please generate OTP first.")
             return redirect("forgot_password")
 
         try:
-            user_service=UserApplicationService(log=logger)
+            user_service = UserApplicationService(log=logger)
             payload, error_message = user_service.decode_token(token)
+
             if not payload:
                 messages.error(request, error_message)
-                return redirect("forgot_password")
+                return redirect("forgot_password")  # Redirect to forgot password view if token is invalid
+
             email = payload.get("email")
             if not email:
                 messages.error(request, "Invalid token.")
-                return redirect("forgot_password")
-            self.request.email = email 
+                return redirect("forgot_password")  # Redirect to forgot password view if email is missing in the payload
+
+            self.request.email = email  # Save email from token to request for later use
+
         except jwt.ExpiredSignatureError:
             messages.error(request, "The link has expired. Please request a new OTP.")
-            return redirect("forgot_password")
+            return redirect("forgot_password")  # Redirect to forgot password view if the token is expired
         except jwt.InvalidTokenError:
             messages.error(request, "Invalid token.")
-            return redirect("forgot_password")
+            return redirect("forgot_password")  # Redirect to forgot password view if the token is invalid
 
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        """
+        Handles the successful submission of the reset password form. It resets the user's password and redirects them to the login page.
+        """
         new_password = form.cleaned_data["new_password"]
-        email = self.request.email 
+        email = self.request.email  # Get the email from the decoded token
 
         try:
             if email:
@@ -272,19 +308,18 @@ class ResetPasswordView(FormView):
                 user_service.reset_password(email, new_password)
                 logger.info(f"Password reset successfully for email {email}")
                 messages.success(self.request, "Password reset successfully.")
-                self.request.session.flush()
-                return redirect(self.get_success_url())
+                return redirect(self.get_success_url())  # Redirect to the login page
             else:
                 messages.error(self.request, "An error occurred.")
                 logger.error(f"Password reset failed for email {email}")
                 return self.form_invalid(form)
-
         except Exception as e:
             logger.error(f"Error occurred while resetting password for email {email}: {str(e)}")
             messages.error(self.request, "An error occurred while resetting your password. Please try again later.")
             return self.form_invalid(form)
 
     def form_invalid(self, form):
+        """
+        Handles invalid form submissions. This method is called when the form is not valid.
+        """
         return self.render_to_response({"form": form})
-
-            

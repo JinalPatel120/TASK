@@ -30,7 +30,10 @@
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <p>Didn't receive the OTP? <a href="{% url 'verify_otp' %}?resend=true" id="resendOtpLink" class="disabled-link">Resend OTP</a></p>
+            <p>Didn't receive the OTP? 
+                <a href="{% url 'verify_otp' %}?resend=true&token={{ request.GET.token }}" id="resendOtpLink" class="disabled-link">Resend OTP</a></p>
+            </p>
+
             <button type="submit" class="btn btn-primary">Verify</button>
             <button class="btn btn-secondary">
                 <a href="{% url 'forgot_password' %}" style="color: white; text-decoration: none;">Back</a>
@@ -44,7 +47,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             var resendLink = document.getElementById("resendOtpLink");
-            var countdown = 60; // 1 minute countdown
+            var countdown = 10; // 1 minute countdown
 
             var interval = setInterval(function() {
                 countdown--;
