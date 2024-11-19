@@ -37,17 +37,19 @@ class UserApplicationService:
         last_name = user_data.get("last_name")
 
         # Combine the conditions to check for both email and username at once
-        user_exists = User.objects.filter(Q(email=email) | Q(username=username)).aggregate(
+        user_exists = User.objects.filter(
+            Q(email=email) | Q(username=username)
+        ).aggregate(
             email_count=Count(Case(When(email=email, then=1))),
             username_count=Count(Case(When(username=username, then=1))),
         )
 
-        if user_exists['email_count'] > 0:
+        if user_exists["email_count"] > 0:
             self.log.error(
                 f"Registration failed: User with email {email} already exists."
             )
             return "A user with this email address already exists."
-        if user_exists['username_count'] > 0:
+        if user_exists["username_count"] > 0:
             self.log.error(
                 f"Registration failed: User with username {username} already exists."
             )
@@ -122,14 +124,18 @@ class UserApplicationService:
             minutes=expiration_minutes
         )  # 10 minutes expiration
         payload = {"email": email, "exp": expiration_time}
-        return jwt.encode(payload, settings.SECRET_KEY_TOKEN, algorithm=settings.ALGORITHM)
+        return jwt.encode(
+            payload, settings.SECRET_KEY_TOKEN, algorithm=settings.ALGORITHM
+        )
 
     def decode_token(self, token: str) -> str:
         """
         Decodes and validates the JWT token. Returns a tuple of decoded payload or error message.
         """
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY_TOKEN, algorithms=settings.ALGORITHM)
+            payload = jwt.decode(
+                token, settings.SECRET_KEY_TOKEN, algorithms=settings.ALGORITHM
+            )
             return payload, None
         except jwt.ExpiredSignatureError:
             return None, "The link has expired. Please request a new OTP."
@@ -164,7 +170,9 @@ class UserApplicationService:
                 "error_message": "User with this email does not exist. please Register First !",
             }
 
-    def generate_and_send_otp(self, email: str, token: str, resend: bool = False) -> str:
+    def generate_and_send_otp(
+        self, email: str, token: str, resend: bool = False
+    ) -> str:
         """
         Generates a 6-digit OTP, saves it in the database, and sends it to the user's email with an HTML template.
         """
@@ -172,20 +180,25 @@ class UserApplicationService:
         expiration_time = timezone.now() + timedelta(minutes=5)
 
         # Save OTP in the database (assuming you have this method)
-        self.save_otp(token=token, otp=otp, expiration_time=expiration_time, email=email)
+        self.save_otp(
+            token=token, otp=otp, expiration_time=expiration_time, email=email
+        )
 
         if resend:
             verification_url = None  # No URL for resend
         else:
-            verification_url = self.generate_otp_verification_url(token)  # Generate URL for first OTP
+            verification_url = self.generate_otp_verification_url(
+                token
+            )  # Generate URL for first OTP
 
         # Render the HTML email template
-        email_body_html = render_to_string('index1.html', {
-            'otp': otp,
-            'verification_url': verification_url,
-        })
-
-      
+        email_body_html = render_to_string(
+            "index1.html",
+            {
+                "otp": otp,
+                "verification_url": verification_url,
+            },
+        )
 
         # Create the email message with the rendered HTML
         subject = "Your OTP Code"
@@ -193,19 +206,16 @@ class UserApplicationService:
         to_email = [email]
 
         email_message = EmailMultiAlternatives(
-            subject, 
+            subject,
             email_body_html,  # Plain text message (can be None)
-            from_email, 
-            to_email
+            from_email,
+            to_email,
         )
 
-       
-    
         email_message.attach_alternative(email_body_html, "text/html")
         email_message.send()
 
         return otp
-
 
     def generate_otp_verification_url(self, token: str) -> str:
         """
@@ -214,7 +224,9 @@ class UserApplicationService:
 
         return f"{settings.SITE_URL}/verify_otp/?token={token}"
 
-    def save_otp(self, email: str, otp: str, expiration_time: datetime, token: str) -> OTP:
+    def save_otp(
+        self, email: str, otp: str, expiration_time: datetime, token: str
+    ) -> OTP:
         """
         Saves or updates the OTP for a given user in the database.
         """
