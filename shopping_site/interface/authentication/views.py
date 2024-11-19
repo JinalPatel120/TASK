@@ -8,7 +8,8 @@ from shopping_site.application.authentication.services import UserApplicationSer
 from django.contrib import messages
 from django.views.generic import TemplateView
 from shopping_site.infrastructure.logger.models import logger
-from datetime import datetime
+from datetime import datetime,timedelta
+
 import jwt
 
 
@@ -45,9 +46,6 @@ class RegisterView(FormView):
                 elif 'username' in user:
                     form.add_error('username', user)
                 return self.form_invalid(form)
-         
-          
-
             messages.success(self.request,'User Register Successfully !')
          
             return redirect(self.success_url)
@@ -128,8 +126,7 @@ class ProductPageView(TemplateView):
             messages.error(request, "You must be logged in to view this page.")
             return redirect('login')  
         return super().dispatch(request, *args, **kwargs)
-
-
+           
 
 class ForgotPasswordView(FormView):
     template_name = "forgot_password.html"
@@ -140,37 +137,21 @@ class ForgotPasswordView(FormView):
         email = form.cleaned_data["email"]
         try:
             user_service = UserApplicationService(log=logger)
-            result = user_service.request_password_reset(email)
+         
+             # Generate token using the UserApplicationService
+            token = user_service.generate_token(email)
+  
 
-            if result["success"]:
-                # Generate JWT token for the user with email and expiration time
-                expiration_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)  # 10 minutes expiration
-                payload = {"email": email, "exp": expiration_time}
-                token = jwt.encode(payload, "jinal123", algorithm="HS256")
-
-                
-      
-                
-                # Send OTP to the email and include the token
-                user_service.generate_and_send_otp(self.request, email,token)
-                self.request.session['reset_token'] = token
-                logger.info(f"Token {token} for {email} stored in session.")
-                messages.success(self.request, "OTP has been sent to your email.")
-                logger.info(f"OTP requested for email: {email}")
-                return redirect(self.get_success_url())
-            else:
-                messages.error(self.request, result["error_message"])
-                logger.warning(f"Failed to request password reset for email {email}: {result['error_message']}")
-                return self.form_invalid(form)
-
+            # Send OTP to the email with the token
+            user_service.generate_and_send_otp(email, token)
+            self.request.session['reset_token'] = token
+            print(self.request.session.items(),'session')
+            messages.success(self.request, "OTP has been sent to your email.")
+            return redirect(self.get_success_url())
         except Exception as e:
-            logger.error(f"An error occurred while processing password reset request for email {email}: {str(e)}")
-            messages.error(self.request, "An error occurred while processing your request. Please try again later.")
+            logger.error(f"An error occurred: {str(e)}")
+            messages.error(self.request, "An error occurred while processing your request.")
             return self.form_invalid(form)
-
-    def form_invalid(self, form):
-        logger.warning(f"Form invalid: {form.errors}")
-        return self.render_to_response({"form": form})
 
 
 class OTPVerificationView(FormView):
@@ -178,24 +159,33 @@ class OTPVerificationView(FormView):
     form_class = OTPVerificationForm
     success_url = "reset_password"
 
-    # In OTPVerificationView dispatch method
-
     def dispatch(self, request, *args, **kwargs):
-        token = request.session.get('reset_token')  # Fetch token from session
-     
+        token = request.session.get('reset_token')
+        print(token,'token')
+
         if not token:
+            print('hello')
             messages.error(request, "You must generate an OTP to access this page.")
             return redirect("forgot_password")
         
         try:
-            # Decode the JWT token to get the email
-            payload = jwt.decode(token, "jinal123", algorithms=["HS256"])
+            print('hello1')
+            user_service = UserApplicationService(log=logger)
+         
+             # Generate token using the UserApplicationService
+            payload,error_message= user_service.decode_token(token)
+   
+            if not payload:
+                messages.error(request, error_message)
+                return redirect("forgot_password")
+            print('payload',payload)
             email = payload.get("email")
+            print('email',email)
             if not email:
                 messages.error(request, "Invalid token.")
                 return redirect("forgot_password")
-            self.request.email = email  # Store the email in the request object for use in form_valid()
-            self.request.token = token  # Store the token for later use
+            self.request.email = email
+            self.request.token = token
         except jwt.ExpiredSignatureError:
             messages.error(request, "The link has expired. Please request a new OTP.")
             return redirect("forgot_password")
@@ -205,44 +195,41 @@ class OTPVerificationView(FormView):
         
         return super().dispatch(request, *args, **kwargs)
 
-
-
     def form_valid(self, form):
         otp = form.cleaned_data["otp"]
-        email = self.request.email  # Use the email from the decoded token
-        token = self.request.token  # Use the token stored in the request
+        email = self.request.email
+        token = self.request.token
 
         user_service = UserApplicationService(log=logger)
 
-        if user_service.verify_otp(self.request,email, token, otp):
-            messages.success(self.request, "OTP Verified successfully!")
-            logger.info(f"OTP verified successfully for email {email}")
+        # Verify OTP
+        result = user_service.verify_otp(email, otp, token)
+        if result["success"]:
+            messages.success(self.request, result["message"])
             return redirect(self.get_success_url())
         else:
-            attempts = user_service.increment_otp_attempts(self.request)
-            remaining_attempts = 3 - attempts
+            messages.error(self.request, result["message"])
+            return self.form_invalid(form)
+        
+    def get(self, request, *args, **kwargs):
+        if 'resend' in request.GET:
+            return self.resend_otp(request)
+        return super().get(request, *args, **kwargs)
 
-            if remaining_attempts <= 0:
-                next_attempt_time_seconds = user_service.set_next_attempt_time(self.request, attempts)
-                return self.form_invalid(form, next_attempt_time_seconds=next_attempt_time_seconds, is_disabled=True)
-            else:
-                messages.error(self.request, f"Invalid OTP. You have {remaining_attempts} attempts remaining.")
-                logger.warning(f"Invalid OTP for email {email}. Attempts left: {remaining_attempts}")
-                return self.form_invalid(form)
+    def resend_otp(self, request):
+        email = self.request.email
+        user_service=UserApplicationService(log=logger)
+        token = user_service.generate_token(email)
+        result = user_service.generate_and_send_otp(email, token)
 
-    def form_invalid(self, form, next_attempt_time_seconds=None, is_disabled=False):
-        remaining_message = None
-        if next_attempt_time_seconds:
-            remaining_message = f"You can attempt again in: {next_attempt_time_seconds} seconds"
+        if result:
+            self.request.session['reset_token'] = token
+            messages.success(request, "A new OTP has been sent to your email.")
+        else:
+            messages.error(request, "Failed to resend OTP. Please try again.")
+        return redirect("verify_otp")
 
-        return self.render_to_response({
-            "form": form,
-            "is_disabled": is_disabled,
-            "remaining_message": remaining_message,
-            "next_attempt_time_seconds": next_attempt_time_seconds
-        })
 
-    
 
 class ResetPasswordView(FormView):
     template_name = "reset_password.html"
@@ -256,13 +243,16 @@ class ResetPasswordView(FormView):
             return redirect("forgot_password")
 
         try:
-      
-            payload = jwt.decode(token, "jinal123", algorithms=["HS256"])
+            user_service=UserApplicationService(log=logger)
+            payload, error_message = user_service.decode_token(token)
+            if not payload:
+                messages.error(request, error_message)
+                return redirect("forgot_password")
             email = payload.get("email")
             if not email:
                 messages.error(request, "Invalid token.")
                 return redirect("forgot_password")
-            self.request.email = email  # Store the email in the request object for use in form_valid()
+            self.request.email = email 
         except jwt.ExpiredSignatureError:
             messages.error(request, "The link has expired. Please request a new OTP.")
             return redirect("forgot_password")
@@ -274,7 +264,7 @@ class ResetPasswordView(FormView):
 
     def form_valid(self, form):
         new_password = form.cleaned_data["new_password"]
-        email = self.request.email  # Use the email from the decoded token
+        email = self.request.email 
 
         try:
             if email:

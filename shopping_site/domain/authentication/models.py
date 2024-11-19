@@ -4,7 +4,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser,BaseUserManager
 import jwt
-import datetime
+from django.utils import timezone
 
 
 
@@ -73,32 +73,22 @@ class User(AbstractUser):
 
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    otp = models.CharField(max_length=6)
+    otp = models.CharField(max_length=6)  # OTP is 6 digits
     expiration_time = models.DateTimeField()
+    attempts = models.IntegerField(default=0)  # Track number of attempts
+    token = models.CharField(max_length=255)  # Token to verify OTP
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        db_table='otp'
-
-    def __str__(self):
-        return f"OTP for {self.user.email} - {self.otp}"
-
-  
-
-
-
-class OTPToken(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    token = models.CharField(max_length=255, unique=True)  
-    expiration_time = models.DateTimeField()  
-    created_at = models.DateTimeField(auto_now_add=True)  
-    
     def is_expired(self):
-        """Check if the token has expired."""
-        return self.expiration_time < datetime.datetime.now()
+        return timezone.now() > self.expiration_time
 
-    def __str__(self):
-        return f"Token for {self.user.username} (Expires: {self.expiration_time})"
+    def increment_attempts(self):
+        self.attempts += 1
+        self.save()
+
+    def reset_attempts(self):
+        self.attempts = 0
+        self.save()
 
 class UserFactory:
     """

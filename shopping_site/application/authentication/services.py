@@ -1,5 +1,5 @@
 #shopping_site/application/authentication/services.py
-from shopping_site.domain.authentication.models import User,OTP,OTPToken
+from shopping_site.domain.authentication.models import User,OTP
 from shopping_site.domain.authentication.services import UserServices
 from typing import Dict,Optional
 from django.db import IntegrityError
@@ -14,6 +14,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from datetime import timedelta,datetime
 import jwt
+from django.db.models import Q
 
 class UserApplicationService:
     def __init__(self, log: AttributeLogger)-> None:
@@ -30,15 +31,18 @@ class UserApplicationService:
         first_name = user_data.get('first_name')
         last_name = user_data.get('last_name')
 
-        # Log if the email already exists
-        if User.objects.filter(email=email).exists():
-            self.log.error(f"Registration failed: User with email {email} already exists.")
-            return "A user with this email address already exists."
+   
 
-        # Log if the username already exists
-        if User.objects.filter(username=username).exists():
-            self.log.error(f"Registration failed: User with username {username} already exists.")
-            return "A user with this username already exists."
+        # Combine the conditions to check for both email and username at once
+        user_exists = User.objects.filter(Q(email=email) | Q(username=username)).first()
+        if user_exists:
+            # Log the specific error based on which field exists
+            if user_exists.email == email:
+                self.log.error(f"Registration failed: User with email {email} already exists.")
+                return "A user with this email address already exists."
+            if user_exists.username == username:
+                self.log.error(f"Registration failed: User with username {username} already exists.")
+                return "A user with this username already exists."
 
         # Call UserServices to create the user and return the created user object
         user = UserServices.get_user_factory().build_entity_with_id(
@@ -79,31 +83,40 @@ class UserApplicationService:
             raise ValidationError("Both fields are required.")
 
         try:
-            # Attempt to get the user
-            user = User.objects.get(username=username)
+            self.log.info(f"Attempting to authenticate user {username}.")
+            user = authenticate(username=username, password=password)
 
-            # Log the password hash check
-            self.log.info(f"Checking password for user {username}.")
-            if check_password(password, user.password):
-                self.log.info(f"Password matched for user {username}.")
-                
-                # Authenticate the user
-                authenticated_user = authenticate(username=username, password=password)
-                if authenticated_user:
-                    self.log.info(f"User {username} authenticated successfully.")
-                    # You can also manually log the user in here if needed
-                    login(request, authenticated_user)  # Make sure the user is logged in
-                    return authenticated_user
-                else:
-                    self.log.warning(f"Authentication failed for user {username}.")
-                    return None
+            if user is not None:
+                self.log.info(f"User {username} authenticated successfully.")
+                login(request, user) 
+                return user
             else:
-                self.log.warning(f"Login failed: Incorrect password for user {username}.")
+                self.log.warning(f"Login failed: Incorrect username or password for user {username}.")
                 return None
-
+                 
         except User.DoesNotExist:
             self.log.error(f"Login failed: User with username {username} does not exist.")
             return None
+        
+    def generate_token(self, email: str, expiration_minutes=10) -> str:
+        """
+        Generates a JWT token for password reset with an expiration time.
+        """
+        expiration_time = datetime.utcnow() + timedelta(minutes=expiration_minutes)  # 10 minutes expiration
+        payload = {"email": email, "exp": expiration_time}
+        return jwt.encode(payload, "jinal123", algorithm="HS256")
+
+    def decode_token(self, token: str):
+        """
+        Decodes and validates the JWT token. Returns a tuple of decoded payload or error message.
+        """
+        try:
+            payload = jwt.decode(token, "jinal123", algorithms=["HS256"])
+            return payload, None  # Return the decoded payload if valid
+        except jwt.ExpiredSignatureError:
+            return None, "The link has expired. Please request a new OTP."
+        except jwt.InvalidTokenError:
+            return None, "Invalid token."
   
     def request_password_reset(self,email):
         try:
@@ -115,136 +128,146 @@ class UserApplicationService:
             self.log.error(f"Password reset failed: User with email {email} does not exist.")
             return {"success": False, "error_message": "User with this email does not exist. please Register First !"}
 
+    
 
-    # def generate_and_send_otp(self,request,email):
-    #     otp = str(random.randint(100000, 999999))
-    #     expiration_time = timezone.now() + timedelta(minutes=5)  # OTP expires in 5 minutes
-        
-    #     UserApplicationService.save_otp(self,request, email, otp, expiration_time)
-        
-    #     send_mail(
-    #         'Your OTP Code',
-    #         f'Your OTP code is {otp}',
-    #         settings.DEFAULT_FROM_EMAIL,
-    #         [email]
-    #     )
-    #     self.log.info(f"OTP generated and sent to {email}")
-    #     request.session["otp_generated_time"] =  timezone.now().isoformat()
-    #     request.session["otp_attempts"] = 0
+    
+    # Retrieve and convert the datetime object from the session
+    # def get_otp_generated_time(self,request):
+    #     otp_generated_time_str = request.session.get("otp_generated_time")
+    #     if otp_generated_time_str:
+    #         otp_generated_time = timezone.datetime.fromisoformat(otp_generated_time_str)
+    #         return otp_generated_time
+    #     return None
+    
 
-    #     return otp
+    # def save_otp(self,request, email, otp, expiration_time):
+    #     try:
+    #         user = UserServices.get_user_by_email(email=email)
+            
+    #         # Check if an OTP entry already exists for the user
+    #         OTP.objects.update_or_create(
+    #             user=user,
+    #             defaults={
+    #                 'otp': otp,
+    #                 'expiration_time': expiration_time,
+    #                 'created_at': timezone.now() 
+    #             }
+    #         )     
+    #         self.log.info(f"OTP saved for user {email}")
+    #     except User.DoesNotExist:
+    #         self.log.error(f"User with email {email} does not exist.")
 
 
-    def generate_and_send_otp(self, request, email, token):
-        otp = str(random.randint(100000, 999999))
+
+    # def verify_otp(self, request, email, token, otp):
+    #     try:
+    #         # Fetch the token from the session
+    #         session_token = request.session.get('reset_token')
+
+    #         # Fetch the token from the database (latest token for the user)
+    #         otp_token = OTPToken.objects.filter(user__email=email, token=session_token).order_by('-created_at').first()
+
+    #         if not otp_token:
+    #             self.log.warning(f"Token does not exist or is invalid for email {email}.")
+    #             return False
+
+    #         self.log.info(f"Token found for email {email}")
+
+    #         # Check if the token has expired
+    #         if timezone.now() > otp_token.expiration_time:
+    #             self.log.warning(f"OTP Token has expired for user {email}.")
+    #             return False
+
+    #         # Check if the user exists
+    #         try:
+    #             user = User.objects.get(email=email)
+    #         except User.DoesNotExist:
+    #             self.log.error(f"User with email {email} does not exist.")
+    #             return False
+
+    #         # Retrieve the most recent OTP record for the user
+    #         otp_record = OTP.objects.filter(user=user).order_by('-created_at').first()
+
+    #         self.log.info(f"OTP Record: OTP for {email} - {otp_record.otp}")
+    #         self.log.info(f"Provided OTP: {otp}")
+    #         self.log.info(f"OTP Expiry Time: {otp_record.expiration_time}")
+    #         self.log.info(f"token as otp : {token}")
+
+    #         # Validate OTP
+    #         if otp_record and otp_record.otp == otp and timezone.now() < otp_record.expiration_time:
+    #             self.log.info(f"OTP verification successful for user {email}")
+    #             return True
+    #         else:
+    #             self.log.warning(f"OTP verification failed for user {email}. OTP might be incorrect or expired.")
+    #             return False
+
+    #     except Exception as e:
+    #         self.log.error(f"Error verifying OTP for email {email}: {str(e)}")
+    #         return False
+
+
+    
+    def generate_and_send_otp(self, email, token):
+        otp = str(random.randint(100000, 999999))  # 6 digit OTP
         expiration_time = timezone.now() + timedelta(minutes=5)  # OTP expires in 5 minutes
 
         # Save OTP and token in the database
-        self.save_otp(request, email, otp, expiration_time)
+        self.save_otp(email, otp, expiration_time, token)
 
-        user = User.objects.get(email=email)
-        
-        # Use the token passed as argument and store it in the OTPToken model
-        otp_token, created = OTPToken.objects.update_or_create(
-            user=user,
-            defaults={
-                'token': token,  # Use the token passed from form_valid
-                'expiration_time': expiration_time
-            }
-        )
-        self.log.info(f"Token {'created' if created else 'updated'} for user {email}: {otp_token.token}")
-
-        # Store the token in the session (if not already done in form_valid)
-        if 'reset_token' not in request.session:
-            request.session['reset_token'] = token
-            self.log.info(f"Token stored in session for {email}: {token}")
-
-        # Send OTP and token via email (your existing email sending logic)
+        # Send OTP to email
         send_mail(
             'Your OTP Code',
-            f'Your OTP code is {otp}. Use this token for OTP verification: {token}',
+            f'Your OTP code is {otp}. Use this token to verify your OTP: {token}',
             settings.DEFAULT_FROM_EMAIL,
             [email]
         )
 
-        self.log.info(f"OTP generated and sent to {email}, {otp}")
         return otp
 
-    
-    # Retrieve and convert the datetime object from the session
-    def get_otp_generated_time(self,request):
-        otp_generated_time_str = request.session.get("otp_generated_time")
-        if otp_generated_time_str:
-            otp_generated_time = timezone.datetime.fromisoformat(otp_generated_time_str)
-            return otp_generated_time
-        return None
-    
+    def save_otp(self, email, otp, expiration_time, token):
+        user = User.objects.get(email=email)
+        
+        print('user save otp',user)
+        print('token save otp',token)
+        # Create or update the OTP entry for the user
+        otp_entry, created = OTP.objects.update_or_create(
+            user=user,
+             # Store the token in the OTP model
+            defaults={
+                'otp': otp,
+                'token':token, 
+                'expiration_time': expiration_time,
+                'attempts': 0,  # Reset attempts for new OTP
+                'created_at': timezone.now()
+            }
+        )
+        return otp_entry
 
-    def save_otp(self,request, email, otp, expiration_time):
+    def verify_otp(self, email, otp, token):
         try:
-            user = UserServices.get_user_by_email(email=email)
-            
-            # Check if an OTP entry already exists for the user
-            OTP.objects.update_or_create(
-                user=user,
-                defaults={
-                    'otp': otp,
-                    'expiration_time': expiration_time,
-                    'created_at': timezone.now() 
-                }
-            )     
-            self.log.info(f"OTP saved for user {email}")
-        except User.DoesNotExist:
-            self.log.error(f"User with email {email} does not exist.")
+            otp_entry = OTP.objects.get(user__email=email, token=token)
 
+            # Check if OTP is expired
+            if otp_entry.is_expired():
+                return {"success": False, "message": "OTP has expired."}
 
-
-    def verify_otp(self, request, email, token, otp):
-        try:
-            # Fetch the token from the session
-            session_token = request.session.get('reset_token')
-
-            # Fetch the token from the database (latest token for the user)
-            otp_token = OTPToken.objects.filter(user__email=email, token=session_token).order_by('-created_at').first()
-
-            if not otp_token:
-                self.log.warning(f"Token does not exist or is invalid for email {email}.")
-                return False
-
-            self.log.info(f"Token found for email {email}")
-
-            # Check if the token has expired
-            if timezone.now() > otp_token.expiration_time:
-                self.log.warning(f"OTP Token has expired for user {email}.")
-                return False
-
-            # Check if the user exists
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                self.log.error(f"User with email {email} does not exist.")
-                return False
-
-            # Retrieve the most recent OTP record for the user
-            otp_record = OTP.objects.filter(user=user).order_by('-created_at').first()
-
-            self.log.info(f"OTP Record: OTP for {email} - {otp_record.otp}")
-            self.log.info(f"Provided OTP: {otp}")
-            self.log.info(f"OTP Expiry Time: {otp_record.expiration_time}")
-            self.log.info(f"token as otp : {token}")
-
-            # Validate OTP
-            if otp_record and otp_record.otp == otp and timezone.now() < otp_record.expiration_time:
-                self.log.info(f"OTP verification successful for user {email}")
-                return True
+            # Check if OTP matches and attempts are less than 3
+            if otp_entry.otp == otp:
+                if otp_entry.attempts >= 3:
+                    return {"success": False, "message": "Too many attempts. Please request a new OTP."}
+                else:
+                    otp_entry.reset_attempts()  # Reset attempts on success
+                    return {"success": True, "message": "OTP verified successfully."}
             else:
-                self.log.warning(f"OTP verification failed for user {email}. OTP might be incorrect or expired.")
-                return False
+                otp_entry.increment_attempts()  # Increment attempts on failure
+                attempts_left = 3 - otp_entry.attempts
+                if otp_entry.attempts >= 3:
+                    return {"success": False, "message": "Too many failed attempts. Please request a new OTP."}
+                else:
+                    return {"success": False, "message": f"Invalid OTP. You have {attempts_left} attempts left."}
 
-        except Exception as e:
-            self.log.error(f"Error verifying OTP for email {email}: {str(e)}")
-            return False
-
+        except OTP.DoesNotExist:
+            return {"success": False, "message": "Invalid token or OTP."}
 
 
     def reset_password(self,email, new_password):
@@ -262,8 +285,6 @@ class UserApplicationService:
         except Exception as e:
             self.log.error(f"Unexpected error during password reset for user {email}: {str(e)}")
 
-
-   
 
     def handle_otp_attempts(self, request):
         """
@@ -309,18 +330,4 @@ class UserApplicationService:
         return next_attempt_seconds
 
 
-    # def verify_otp(self,email, otp):
-    #     try:
-    #         user = UserServices.get_user_by_email(email=email)
-    #         otp_record = OTP.objects.filter(user=user).order_by('-created_at').first()
-
-    #         if otp_record and otp_record.otp == otp and timezone.now() < otp_record.expiration_time:
-    #             self.log.info(f"OTP verification successful for user {email}")
-    #             return True
-    #         else:
-    #             self.log.warning(f"OTP verification failed for user {email}. OTP might be incorrect or expired.")
-    #             return False
-          
-    #     except User.DoesNotExist:
-    #         self.log.error(f"OTP verification failed: User with email {email} does not exist.")
-    #         return False
+  
