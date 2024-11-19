@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser,BaseUserManager
+import jwt
+import datetime
 
 
 
@@ -83,6 +85,20 @@ class OTP(models.Model):
 
   
 
+
+
+class OTPToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=255, unique=True)  
+    expiration_time = models.DateTimeField()  
+    created_at = models.DateTimeField(auto_now_add=True)  
+    
+    def is_expired(self):
+        """Check if the token has expired."""
+        return self.expiration_time < datetime.datetime.now()
+
+    def __str__(self):
+        return f"Token for {self.user.username} (Expires: {self.expiration_time})"
 
 class UserFactory:
     """
