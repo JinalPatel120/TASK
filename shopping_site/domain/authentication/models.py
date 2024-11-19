@@ -89,6 +89,7 @@ class OTP(models.Model):
     def reset_attempts(self):
         self.attempts = 0
         self.save()
+        
 
 class UserFactory:
     """

@@ -20,6 +20,7 @@ class RegisterView(FormView):
     template_name = 'register.html'
     form_class = RegistrationForm
     success_url = 'login'  # The URL to redirect after successful registration
+    user_service = UserApplicationService(log=logger)
 
     def form_valid(self, form):
         """
@@ -37,8 +38,8 @@ class RegisterView(FormView):
                 "last_name": cleaned_data.get('last_name')
             }
 
-            user_service = UserApplicationService(log=logger)
-            user = user_service.register_user(user_data)
+            
+            user = self.user_service.register_user(user_data)
             if isinstance(user, str):
                 # If the result is an error message (string), return it
                 if 'email' in user:
@@ -68,6 +69,7 @@ class LoginView(FormView):
     form_class = UserLoginForm
     template_name = 'login.html'
     success_url='product_page'
+    user_service = UserApplicationService(log=logger)
    
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -89,8 +91,8 @@ class LoginView(FormView):
                 'username': username,
                 'password': password
             }
-            user_service = UserApplicationService(log=logger)
-            user = user_service.login_user(credentials,self.request)
+            
+            user = self.user_service.login_user(credentials,self.request)
                
             if user:
                 return redirect(self.get_success_url())
@@ -137,6 +139,7 @@ class ForgotPasswordView(FormView):
     template_name = "forgot_password.html"
     form_class = ForgotPasswordForm
     success_url = "verify_otp"
+    user_service = UserApplicationService(log=logger)
 
     def form_valid(self, form):
         """
@@ -145,13 +148,13 @@ class ForgotPasswordView(FormView):
         """
         email = form.cleaned_data["email"]
         try:
-            user_service = UserApplicationService(log=logger)
+            
             
             # Generate token using the UserApplicationService
-            token = user_service.generate_token(email)
+            token = self.user_service.generate_token(email=email)
             
             # Send OTP to the email with the token
-            user_service.generate_and_send_otp(email, token)
+            self.user_service.generate_and_send_otp(email=email, token=token)
             messages.success(self.request, "OTP has been sent to your email. Please check your inbox.")
             return redirect("forgot_password")
         except Exception as e:
@@ -168,6 +171,7 @@ class OTPVerificationView(FormView):
     template_name = "verify_otp.html"
     form_class = OTPVerificationForm
     success_url = "reset_password"
+    user_service = UserApplicationService(log=logger)
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -181,8 +185,8 @@ class OTPVerificationView(FormView):
             return redirect("forgot_password")
 
         try:
-            user_service = UserApplicationService(log=logger)
-            payload, error_message = user_service.decode_token(token)
+         
+            payload, error_message = self.user_service.decode_token(token=token)
             
             if not payload:
                 messages.error(request, error_message)
@@ -213,10 +217,10 @@ class OTPVerificationView(FormView):
         email = self.request.email
         token = self.request.token
 
-        user_service = UserApplicationService(log=logger)
+        
 
         # Verify OTP
-        result = user_service.verify_otp(email, otp, token)
+        result = self.user_service.verify_otp(email=email, otp=otp, token=token)
         if result["success"]:
             messages.success(self.request, result["message"])
             return redirect(f"/reset_password/?token={token}") 
@@ -231,15 +235,15 @@ class OTPVerificationView(FormView):
 
 
     def resend_otp(self, request):
-        user_service = UserApplicationService(log=logger)
+       
         token = request.GET.get('token', None)  
         if not token:
             messages.error(request, "No token found. Please try again.")
             return redirect('verify_otp')  
-        email = user_service.get_email_from_token(token) 
+        email = self.user_service.get_email_from_token(token=token) 
 
         if email:          
-            otp = user_service.generate_and_send_otp(email, token,resend=True)  
+            otp = self.user_service.generate_and_send_otp(email=email, token=token,resend=True)  
             if otp:
                 messages.success(request, "A new OTP has been sent to your email.")
             else:
@@ -258,6 +262,7 @@ class ResetPasswordView(FormView):
     template_name = "reset_password.html"
     form_class = ResetPasswordForm
     success_url = "/login/"
+    user_service = UserApplicationService(log=logger)
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -272,8 +277,8 @@ class ResetPasswordView(FormView):
             return redirect("forgot_password")
 
         try:
-            user_service = UserApplicationService(log=logger)
-            payload, error_message = user_service.decode_token(token)
+          
+            payload, error_message = self.user_service.decode_token(token=token)
 
             if not payload:
                 messages.error(request, error_message)
@@ -303,16 +308,14 @@ class ResetPasswordView(FormView):
         email = self.request.email  # Get the email from the decoded token
 
         try:
-            if email:
-                user_service = UserApplicationService(log=logger)
-                user_service.reset_password(email, new_password)
+            if email:    
+                self.user_service.reset_password(email=email, new_password=new_password)
                 logger.info(f"Password reset successfully for email {email}")
                 messages.success(self.request, "Password reset successfully.")
                 return redirect(self.get_success_url())  # Redirect to the login page
-            else:
-                messages.error(self.request, "An error occurred.")
-                logger.error(f"Password reset failed for email {email}")
-                return self.form_invalid(form)
+            messages.error(self.request, "An error occurred.")
+            logger.error(f"Password reset failed for email {email}")
+            return self.form_invalid(form)
         except Exception as e:
             logger.error(f"Error occurred while resetting password for email {email}: {str(e)}")
             messages.error(self.request, "An error occurred while resetting your password. Please try again later.")

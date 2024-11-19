@@ -28,6 +28,9 @@ from typing import Dict, Any
 
 load_dotenv()
 
+SECRET_KEY_TOKEN = os.getenv("SECRET_KEY_TOKEN")
+ALGORITHM = os.getenv("ALGORITHM")
+SITE_URL = os.getenv("SITE_URL")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
