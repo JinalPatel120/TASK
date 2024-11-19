@@ -239,7 +239,7 @@ class OTPVerificationView(FormView):
         email = user_service.get_email_from_token(token) 
 
         if email:          
-            otp = user_service.resend_otp(email, token)  
+            otp = user_service.generate_and_send_otp(email, token,resend=True)  
             if otp:
                 messages.success(request, "A new OTP has been sent to your email.")
             else:

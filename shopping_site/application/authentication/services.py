@@ -3,7 +3,6 @@ from shopping_site.domain.authentication.models import User,OTP
 from shopping_site.domain.authentication.services import UserServices
 from typing import Dict,Optional
 from django.db import IntegrityError
-from shopping_site.settings import SITE_URL
 from django.core.mail import send_mail
 import random
 from django.contrib.auth.hashers import make_password,check_password
@@ -16,8 +15,16 @@ from datetime import timedelta,datetime
 import jwt
 from django.db.models import Q
 from django.conf import settings
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 class UserApplicationService:
+    SECRET_KEY = os.getenv('SECRET_KEY_TOKEN')
+    ALGORITHM = os.getenv('ALGORITHM')
+    SITE_URL=os.getenv('SITE_URL')
+
     def __init__(self, log: AttributeLogger)-> None:
         self.log = log  # Store the logger instance
 
@@ -105,14 +112,14 @@ class UserApplicationService:
         """
         expiration_time = datetime.utcnow() + timedelta(minutes=expiration_minutes)  # 10 minutes expiration
         payload = {"email": email, "exp": expiration_time}
-        return jwt.encode(payload, "jinal123", algorithm="HS256")
+        return jwt.encode(payload, self.SECRET_KEY, algorithm=self.ALGORITHM)
 
     def decode_token(self, token: str):
         """
         Decodes and validates the JWT token. Returns a tuple of decoded payload or error message.
         """
         try:
-            payload = jwt.decode(token, "jinal123", algorithms=["HS256"])
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=self.ALGORITHM)
             return payload, None 
         except jwt.ExpiredSignatureError:
             return None, "The link has expired. Please request a new OTP."
@@ -120,14 +127,14 @@ class UserApplicationService:
             return None, "Invalid token."
         
     def get_email_from_token(self, token):
-        try:
-            payload = jwt.decode(token, "jinal123", algorithms=["HS256"]) 
-            print('payload',payload)
-            return payload.get("email")
-        except jwt.ExpiredSignatureError:
-            return None  # If token has expired
-        except jwt.InvalidTokenError:
-            return None  # If token is invalid
+        """
+        Extracts the email from the JWT token.
+        """
+        payload, error = self.decode_token(token)
+        if error:
+            self.log.error(f"Token error: {error}")
+            return None
+        return payload.get("email")
 
   
     def request_password_reset(self,email):
@@ -145,56 +152,42 @@ class UserApplicationService:
 
 
     
-    def generate_and_send_otp(self, email, token):
+    def generate_and_send_otp(self, email, token, resend=False):
         """ 
         Generates a 6-digit OTP, saves it in the database, and sends it to the user's email.
         """
-
-        otp = str(random.randint(100000, 999999))  # 6 digit OTP
+        otp = str(random.randint(100000, 999999))  # 6-digit OTP
         expiration_time = timezone.now() + timedelta(minutes=5)  # OTP expires in 5 minutes
 
         # Save OTP and token in the database
         self.save_otp(email, otp, expiration_time, token)
-        verification_url = self.generate_otp_verification_url(token)
+     
+        if resend:
+            # When resending, only send OTP without verification URL
+            email_body = f'Your OTP code is {otp}.'
+        else:
+            # When first generating, include verification URL
+            verification_url = self.generate_otp_verification_url(token)
+            email_body = f'Your OTP code is {otp}.\nYou can verify your OTP by clicking the following link: \n{verification_url}'
 
         # Send OTP to email
         send_mail(
             'Your OTP Code',
-            f'Your OTP code is {otp}.\n You can verify your OTP by clicking the following link: \n {verification_url}',
+            email_body,
             settings.DEFAULT_FROM_EMAIL,
             [email]
         )
 
         return otp
-    
-    def resend_otp(self, email, token):
-        """ 
-        Generates a 6-digit OTP, saves it in the database, and sends it to the user's email.
-        """
 
-        otp = str(random.randint(100000, 999999))  # 6 digit OTP
-        expiration_time = timezone.now() + timedelta(minutes=5)  # OTP expires in 5 minutes
 
-        # Save OTP and token in the database
-        self.save_otp(email, otp, expiration_time, token)
-      
 
-        # Send OTP to email
-        send_mail(
-            'Your OTP Code',
-            f'Your OTP code is {otp}.\n ',
-            settings.DEFAULT_FROM_EMAIL,
-            [email]
-        )
-
-        return otp
-    
     def generate_otp_verification_url(self, token):
         """
         Generates a URL for OTP verification using the provided token.
         """
 
-        return f"{SITE_URL}/verify_otp/?token={token}"
+        return f"{ self.SITE_URL}/verify_otp/?token={token}"
 
     def save_otp(self, email, otp, expiration_time, token):
         """ 
@@ -223,16 +216,16 @@ class UserApplicationService:
         try:
             otp_entry = OTP.objects.get(user__email=email, token=token)
 
-            # Check if OTP is expired
+           
             if otp_entry.is_expired():
                 return {"success": False, "message": "OTP has expired."}
 
-            # Check if OTP matches and attempts are less than 3
+       
             if otp_entry.otp == otp:
                 if otp_entry.attempts >= 3:
                     return {"success": False, "message": "Too many attempts. Please request a new OTP."}
                 else:
-                    otp_entry.reset_attempts()  # Reset attempts on success
+                    otp_entry.reset_attempts()  
                     return {"success": True, "message": "OTP verified successfully."}
             else:
                 otp_entry.increment_attempts()  # Increment attempts on failure

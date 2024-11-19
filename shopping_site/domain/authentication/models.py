@@ -73,10 +73,10 @@ class User(AbstractUser):
 
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    otp = models.CharField(max_length=6)  # OTP is 6 digits
+    otp = models.CharField(max_length=6) 
     expiration_time = models.DateTimeField()
-    attempts = models.IntegerField(default=0)  # Track number of attempts
-    token = models.CharField(max_length=255)  # Token to verify OTP
+    attempts = models.IntegerField(default=0)  
+    token = models.CharField(max_length=255) 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):
