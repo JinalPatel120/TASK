@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.title }}{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <img src="{{ product.image.url }}" class="img-fluid" alt="{{ product.title }}">
+        </div>
+        <div class="col-md-6">
+            <h1>{{ product.title }}</h1>
+            <p class="lead">{{ product.description }}</p>
+            <h3>₹ {{ product.price }}</h3>
+            <p>In Stock: {{ product.quantity }}</p>
+
+            <!-- Product Add to Cart Form -->
+            <form method="POST" action="{% url 'add_to_cart' product.id %}" id="product-form">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">Quantity</label>
+                    <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" >
+                    
+                    <!-- Custom Error Message -->
+                    <div id="error-message" class="text-danger d-none">
+                        You can only enter a quantity of up to {{ product.quantity }}.
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Add to Cart</button>
+            </form>
+        </div>
+    </div>
+    <a href="{% url 'product_list' %}" class="btn btn-secondary mt-3">Back to Product List</a>
+    
+    <!-- Custom JavaScript for validation -->
+    <script>
+        document.getElementById('product-form').addEventListener('submit', function(event) {
+            var quantityInput = document.getElementById('quantity');
+            var errorMessage = document.getElementById('error-message');
+            var quantity = parseInt(quantityInput.value);
+            var maxQuantity = parseInt(quantityInput.max);  // The max quantity available for this product
+
+            // Reset the error message display
+            errorMessage.classList.add('d-none');
+
+            // Custom validation: Check if the entered quantity exceeds available stock
+            if (quantity > maxQuantity) {
+                // Display custom error message
+                errorMessage.classList.remove('d-none');
+                // Prevent form submission
+                event.preventDefault();
+            }
+        });
+    </script>
+{% endblock %}

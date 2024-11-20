@@ -24,9 +24,23 @@ class ProductService:
         This method retrieves a user by their ID using the ProductRepository.
         """
         try:
-            return Product.objects.get(id=product_id)  
+            product=Product.objects.get(id=product_id)
+            return product
         except Product.DoesNotExist:
             raise ValueError(f"Product with ID {product_id} does not exist.")
+        
+    @staticmethod
+    def get_product_by_id_id(product_id: str) -> Product:
+        """
+        This method retrieves a user by their ID using the ProductRepository.
+        """
+        try:
+       
+            product=Product.objects.get(id=product_id)
+            return product.id
+        except Product.DoesNotExist:
+            raise ValueError(f"Product with ID {product_id} does not exist.")
+        
         
     @staticmethod
     def get_all_products():

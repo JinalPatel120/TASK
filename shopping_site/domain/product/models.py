@@ -22,14 +22,18 @@ class Product(TimestampedModel):
     """
 
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
-    title = models.CharField(max_length=150, unique=True, null=False, blank=False)
-    description = models.TextField(null=False, blank=False)
-    price = models.DecimalField(max_digits=10, blank=True,decimal_places=4)
+    title = models.CharField(max_length=150)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=10, decimal_places=4)
     quantity = models.IntegerField( blank=True)
     image=models.ImageField(upload_to='product_image')
 
+    def __str__(self):
+        return self.title
+
     class Meta:
         db_table = "product"
+
 
 class ProductFactory:
     """ 

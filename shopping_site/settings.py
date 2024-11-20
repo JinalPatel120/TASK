@@ -34,6 +34,8 @@ SITE_URL = os.getenv("SITE_URL")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 interface_templates_dir = os.path.join(BASE_DIR, "shopping_site", "interface")
 template_dirs = glob.glob(
     os.path.join(interface_templates_dir, "**", "templates"), recursive=True
@@ -88,7 +90,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "shopping_site.infrastructure.middleware.RequestResponseLoggingMiddleware",
     # 'shopping_site.infrastructure.middleware.SqlLoggerMiddleware'
 ]
 # if DEBUG:
@@ -166,6 +167,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
+
+
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'shopping_site', 'interface', 'product', )
+
+# The base URL to serve media files
+MEDIA_URL = '/media/'
+
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

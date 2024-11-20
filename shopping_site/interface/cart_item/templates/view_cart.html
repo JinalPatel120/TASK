@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Your Cart{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Your Cart</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart_items %}
+            <tr>
+                <td>{{ item.product.title }}</td>
+                <td>
+                    <form method="post" action="{% url 'update_cart_item' item.id %}">
+                        {% csrf_token %}
+                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" required />
+                        <button type="submit" class="btn btn-warning">Update</button>
+                    </form>
+                </td>
+                <td>₹ {{ item.product.price }}</td>
+                <td>₹ {{ item.total_price }}</td>
+                <td>
+                    <form method="post" action="{% url 'remove_cart_item' item.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'product_list' %}" class="btn btn-primary">Continue Shopping</a>
+        {% comment %} <a href="{% url 'checkout' %}" class="btn btn-success">Proceed to Checkout</a> {% endcomment %}
+        <div class="total-amount">
+            <h3>Total: ₹ {{ total }}</h3>  
+        </div>
+    </div>
+</div>
+{% endblock %}
