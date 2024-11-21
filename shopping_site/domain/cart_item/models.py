@@ -10,7 +10,10 @@ class Cart(models.Model):
     session_key = models.CharField(max_length=40, null=True, blank=True)  # For anonymous users
     is_active = models.BooleanField(default=True)
     
-
+    @property
+    def total(self):
+        return sum(item.quantity * item.product.price for item in self.items.all())
+    
     def update_total(self):
         # Update the cart's total price based on the items
         total_price = sum(item.quantity * item.product.price for item in self.items.all())

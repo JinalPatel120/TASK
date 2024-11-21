@@ -9,7 +9,7 @@ from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views import View
 from shopping_site.infrastructure.logger.models import logger
-
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 class ProductCreateView(FormView):
@@ -48,7 +48,6 @@ class ProductCreateView(FormView):
         return super().form_invalid(form)
 
 
-
 class ProductListView(FormView):
 
     """
@@ -61,25 +60,58 @@ class ProductListView(FormView):
 
     def get(self, request, *args, **kwargs):
         try:
-            # Get the search query from the GET parameters
+            # Get filter parameters from the GET request
             search_query = request.GET.get('search_query', '')
+            min_price = request.GET.get('min_price', None)
+            max_price = request.GET.get('max_price', None)
+         
 
-            if search_query:
-                # Filter products based on the search query
-                product_data = self.product_service.filter_products(search_query)
-                logger.info(f"Filtered products with query: {search_query}")
-            else:
-                # Fetch all products if no search query is provided
-                product_data = self.product_service.get_all_products()
-                logger.info("Fetched all products.")
+            if min_price:
+                try:
+                    min_price = float(min_price)
+                except ValueError:
+                    min_price = None  # If invalid, reset to None
 
-            return render(request, self.template_name, {'product_data': product_data, 'search_query': search_query})
+            if max_price:
+                try:
+                    max_price = float(max_price)
+                except ValueError:
+                    max_price = None  # If invalid, reset to None
 
+            product_data = self.product_service.filter_products(
+                search_query=search_query,
+                min_price=min_price,
+                max_price=max_price,
+             
+            )
+
+            logger.info(f"Filtered products with query: {search_query}, min_price: {min_price}, max_price: {max_price}")
+
+            product_data = product_data.order_by('id')
+            paginator = Paginator(product_data, 9)  # Show 9 products per page
+            page = request.GET.get('page', 1)
+
+            try:
+                products = paginator.page(page)
+            except PageNotAnInteger:
+                products = paginator.page(1)
+            except EmptyPage:
+                products = paginator.page(paginator.num_pages)
+
+           
+
+            return render(request, self.template_name, {
+                'product_data': products,
+                'search_query': search_query,
+                'min_price': min_price,
+                'max_price': max_price,
+         
+            })
+           
         except Exception as e:
             logger.error(f"Error occurred while fetching products: {str(e)}")
             return render(request, self.template_name, {'error_message': "An error occurred while fetching products."})
-
-   
+        
 
 class ProductUpdateView(View):
     """

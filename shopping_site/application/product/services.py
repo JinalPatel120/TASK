@@ -4,7 +4,7 @@ from shopping_site.domain.product.services import ProductService
 from shopping_site.domain.product.models import Product
 from typing import Dict, List
 from shopping_site.infrastructure.logger.models import AttributeLogger
-
+from django.db.models import Q
 class ProductApplicationService:
     """
     Application service class responsible for handling the business logic
@@ -167,19 +167,34 @@ class ProductApplicationService:
         """
         return ProductService.search_products(query)
     
-    def filter_products(self, search_query: str):
-        """
-        Filters products based on the search query. Searches by title and description.
-        """
-        try:
-            # Perform the search by matching the search query in product title or description
-            filtered_products = Product.objects.filter(
-                title__icontains=search_query
-            ) | Product.objects.filter(
-                description__icontains=search_query
-            ) 
+    # def filter_products(self, search_query: str):
+    #     """
+    #     Filters products based on the search query. Searches by title and description.
+    #     """
+    #     try:
+    #         # Perform the search by matching the search query in product title or description
+    #         filtered_products = Product.objects.filter(
+    #             title__icontains=search_query
+    #         ) | Product.objects.filter(
+    #             description__icontains=search_query
+    #         ) 
 
-            return filtered_products
-        except Exception as e:
-            self.log.error(f"Error filtering products: {str(e)}")
-            raise
+    #         return filtered_products
+    #     except Exception as e:
+    #         self.log.error(f"Error filtering products: {str(e)}")
+    #         raise
+
+
+    def filter_products(self, search_query='', min_price=None, max_price=None):
+        products = Product.objects.all()
+
+        if search_query:
+            products = products.filter(title__icontains=search_query)
+
+        if min_price is not None:
+            products = products.filter(price__gte=min_price)
+
+        if max_price is not None:
+            products = products.filter(price__lte=max_price)
+
+        return products

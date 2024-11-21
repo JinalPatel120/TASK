@@ -76,7 +76,7 @@ class OTP(models.Model):
     otp = models.CharField(max_length=6)
     expiration_time = models.DateTimeField()
     attempts = models.IntegerField(default=0)
-    token = models.CharField(max_length=255)
+    token = models.CharField(max_length=255,null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):

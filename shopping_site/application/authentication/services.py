@@ -217,7 +217,7 @@ class UserApplicationService:
         Generates a URL for OTP verification using the provided token.
         """
 
-        return f"{settings.SITE_URL}/verify_otp/?token={token}"
+        return f"{settings.SITE_URL}/auth/verify_otp/?token={token}"
 
     def save_otp(
         self, email: str, otp: str, expiration_time: datetime, token: str
@@ -285,6 +285,13 @@ class UserApplicationService:
             hashed_password = make_password(new_password)
             user.password = hashed_password
             user.save()
+            # Invalidate the OTP token
+            # otp_entry = OTP.objects.filter(user=user).first()
+            # print('hello from reset')
+            # if otp_entry:
+            #     otp_entry.token = None
+            #     otp_entry.save()
+
             self.log.info(f"Password reset successfully for user {email}")
         except User.DoesNotExist:
             self.log.error(
@@ -295,6 +302,27 @@ class UserApplicationService:
                 f"Unexpected error during password reset for user {email}: {str(e)}"
             )
 
+    def invalidate_token(self, email: str):
+        """
+        Invalidate the token by setting it to null in the database.
+        """
+        # Assuming you have a model called OTP that stores the token and email
+        otp_record = OTP.objects.filter(user__email=email).first()
+        if otp_record:
+            otp_record.token = None  # Set the token to null to invalidate it
+            otp_record.save()
+        else:
+            raise Exception(f"No OTP record found for email {email}")
+
+    def is_token_invalid(self, email: str) -> bool:
+        """
+        Check if the token for the provided email is invalid (either expired or already used).
+        """
+        otp_record = OTP.objects.filter(user__email=email).first()
+        if otp_record and otp_record.token is None:
+            return True  # Token is invalid
+        return False
+    
     def handle_otp_attempts(self, request: HttpRequest):
         """
         Handles the number of OTP attempts, blocking attempts if necessary and calculating the next retry time.

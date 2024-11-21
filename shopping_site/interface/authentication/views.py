@@ -1,5 +1,5 @@
 from django.shortcuts import redirect, render
-from django.contrib.auth import login
+from django.contrib.auth import logout
 from django.views.generic.edit import FormView
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseServerError, HttpResponseRedirect
@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from shopping_site.infrastructure.logger.models import logger
 import jwt
+from django.contrib.sessions.models import Session
 
 
 class RegisterView(FormView):
@@ -69,11 +70,10 @@ class RegisterView(FormView):
         """
         return self.render_to_response({"form": form})
 
-
 class LoginView(FormView):
     form_class = UserLoginForm
     template_name = "login.html"
-    success_url = "product_page"
+    success_url = "product_list"
     user_service = UserApplicationService(log=logger)
 
     def dispatch(self, request, *args, **kwargs):
@@ -82,11 +82,12 @@ class LoginView(FormView):
             return redirect(self.success_url)
         return super().dispatch(request, *args, **kwargs)
 
+ 
     def form_valid(self, form):
         """
-        Handles the valid form submission. Attempts to authenticate the user based on the provided
-        username and password."""
-
+        Handles valid form submission. Attempts to authenticate the user based on the provided
+        username and password.
+        """
         username = form.cleaned_data.get("username")
         password = form.cleaned_data.get("password")
 
@@ -96,31 +97,48 @@ class LoginView(FormView):
             user = self.user_service.login_user(credentials, self.request)
 
             if user:
+                self.mark_session(self.request, user)
                 return redirect(self.get_success_url())
             else:
                 messages.error(self.request, "Invalid username or password.")
                 return self.form_invalid(form)
 
         except ValidationError as e:
-            # Handle validation errors and add to the form
             logger.error(f"Validation error: {str(e)}")  # Log the validation error
             messages.error(self.request, str(e))
             return self.form_invalid(form)
 
+    def mark_session(self, request, user):
+        """
+        Mark the session of the user to track login state.
+        """
+        request.session['user_id'] = str(user.id)
+        request.session['username'] = user.username
+
     def form_invalid(self, form):
         """
-        Handles the invalid form submission. Logs form errors and displays them to the user.
-        # If the form is invalid, render the form with errors"""
-
+        Handles invalid form submission. Logs form errors and displays them to the user.
+        """
         logger.warning(f"Form invalid: {form.errors}")
-
         for field, errors in form.errors.items():
             for error in errors:
-                # Pass the error message dynamically based on the form field
                 messages.error(self.request, f"{field.capitalize()}: {error}")
-
         return self.render_to_response({"form": form})
 
+
+class LogoutView(TemplateView):
+    """
+    View to handle user logout. Logs the user out and redirects to the login page.
+    """
+    template_name = "logout.html"
+
+    def get(self, request, *args, **kwargs):
+        """
+        Logs out the user and redirects them to the login page with a success message.
+        """
+        logout(request)
+        messages.success(request, "You have been logged out successfully.")
+        return redirect("product_list")
 
 class ProductPageView(TemplateView):
     template_name = "product_page.html"
@@ -208,6 +226,12 @@ class OTPVerificationView(FormView):
 
             self.request.email = email
             self.request.token = token
+             # Check if the token has been invalidated (i.e., it was already used or expired)
+            if self.user_service.is_token_invalid(email=email):
+                messages.error(
+                    request, "This link has already been used or expired. Please request a new OTP."
+                )
+                return redirect("forgot_password")
         except jwt.ExpiredSignatureError:
             messages.error(request, "The link has expired. Please request a new OTP.")
             return redirect("forgot_password")
@@ -230,7 +254,7 @@ class OTPVerificationView(FormView):
         result = self.user_service.verify_otp(email=email, otp=otp, token=token)
         if result["success"]:
             messages.success(self.request, result["message"])
-            return redirect(f"/reset_password/?token={token}")
+            return redirect(f"/auth/reset_password/?token={token}")
         else:
             messages.error(self.request, result["message"])
             return self.form_invalid(form)
@@ -269,7 +293,7 @@ class ResetPasswordView(FormView):
 
     template_name = "reset_password.html"
     form_class = ResetPasswordForm
-    success_url = "/login/"
+    success_url = "/auth/login/"
     user_service = UserApplicationService(log=logger)
 
     def dispatch(self, request, *args, **kwargs):
@@ -328,6 +352,7 @@ class ResetPasswordView(FormView):
         try:
             if email:
                 self.user_service.reset_password(email=email, new_password=new_password)
+                self.user_service.invalidate_token(email=email)
                 logger.info(f"Password reset successfully for email {email}")
                 messages.success(self.request, "Password reset successfully.")
                 return redirect(self.get_success_url())  # Redirect to the login page

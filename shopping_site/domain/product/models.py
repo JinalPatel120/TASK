@@ -24,7 +24,7 @@ class Product(TimestampedModel):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     title = models.CharField(max_length=150)
     description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=4)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField( blank=True)
     image=models.ImageField(upload_to='product_image')
 

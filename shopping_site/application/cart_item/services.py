@@ -38,7 +38,7 @@ class CartService:
             # Generate a new session key if none exists
             session_key = str(uuid.uuid4())  # Generate a unique session key
         
-        print('Session key:', session_key)
+ 
         # Fetch or create a cart associated with the session_key
         cart, created = Cart.objects.get_or_create(session_key=session_key, is_active=True)
         
@@ -73,7 +73,8 @@ class CartService:
             # For anonymous users, use the session key from request
             session_key = request.session.session_key if request.session.session_key else None
             cart = Cart.objects.filter(session_key=session_key).first()
-        
+            print('cart items',cart.items.all() if cart else [])
+
         return cart.items.all() if cart else []
     
     
@@ -112,3 +113,13 @@ class CartService:
         item = CartItem.objects.get(id=item_id)
         item.delete()
 
+    def get_cart_item_count(self, cart):
+        """
+        This method returns the total number of items in the cart.
+        It sums the quantity of each product in the cart.
+        """
+        # Ensure `cart.items` is a queryset and not a RelatedManager
+        cart_items = cart.items.all()  # Use .all() to fetch the related items
+
+        # Now, sum the quantities of the items in the cart
+        return sum(item.quantity for item in cart_items)
