@@ -177,7 +177,7 @@ class ProductApplicationService:
                 title__icontains=search_query
             ) | Product.objects.filter(
                 description__icontains=search_query
-            )
+            ) 
 
             return filtered_products
         except Exception as e:

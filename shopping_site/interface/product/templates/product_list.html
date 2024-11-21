@@ -3,6 +3,19 @@
 {% block title %}Product List{% endblock %}
 
 {% block content %}
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+        {% if message.level == 40 %} <!-- Error message -->
+            <li class="alert alert-danger">{{ message }}</li>
+        {% elif message.level == 25 %} <!-- Success message -->
+            <li class="alert alert-success">{{ message }}</li>
+        {% else %}
+            <li class="alert alert-info">{{ message }}</li> <!-- Other types of messages -->
+        {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
     <div class="container">
         <h1 class="text-center mb-4">Products</h1>
 

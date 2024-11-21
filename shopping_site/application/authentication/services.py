@@ -13,7 +13,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from datetime import timedelta, datetime
 import jwt
-from django.db.models import Q, Case, When, Value, CharField, Count
+from django.db.models import Q, Case, When, Count
 from django.conf import settings
 from django.http import HttpRequest
 from django.core.mail import EmailMultiAlternatives
@@ -43,18 +43,13 @@ class UserApplicationService:
             email_count=Count(Case(When(email=email, then=1))),
             username_count=Count(Case(When(username=username, then=1))),
         )
-
-        if user_exists["email_count"] > 0:
+        error_message="A user with this email address already exists." if user_exists["email_count"] > 0 else "A user with this username already exists."
+        log_error_message=f"Registration failed: User with email {email} already exists." if user_exists["email_count"] > 0 else f"Registration failed: User with username {username} already exists."
+        if user_exists["email_count"] > 0 or user_exists["username_count"] > 0:
             self.log.error(
-                f"Registration failed: User with email {email} already exists."
+                log_error_message
             )
-            return "A user with this email address already exists."
-        if user_exists["username_count"] > 0:
-            self.log.error(
-                f"Registration failed: User with username {username} already exists."
-            )
-            return "A user with this username already exists."
-
+            return error_message
         user = UserServices.get_user_factory().build_entity_with_id(
             username=username,
             email=email,

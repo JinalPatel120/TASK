@@ -18,20 +18,36 @@ class AddToCartView(View):
         """
         Handles the POST request for adding a product to the cart.
         """
+        try:
+            product = ProductApplicationService.get_product_by_id(product_id)
+            quantity = int(request.POST.get("quantity", 1))
 
-        product = ProductApplicationService.get_product_by_id(product_id)
-        quantity = int(request.POST.get("quantity", 1))
+             # Validate if the quantity is less than or equal to 0
+            if quantity <= 0:
+                messages.error(request, "The quantity must be a positive number.")
+                return redirect('product_detail', product_id=product.id)
+            
+            if quantity > product.quantity:
+                    messages.error(request, f"Sorry, only {product.quantity} of this product is available.")
+                    return redirect('product_detail', product_id=product.id)
+            
+            if request.user.is_authenticated:
+                cart = self.cart_service.get_or_create_cart_for_user(request.user)
+            else:
+                cart = self.cart_service.get_or_create_cart_for_anonymous_user(request.session.session_key)
 
-        if request.user.is_authenticated:
-            cart = self.cart_service.get_or_create_cart_for_user(request.user)
-        else:
-            cart = self.cart_service.get_or_create_cart_for_anonymous_user(request.session.session_key)
+            # Add the product to the cart
+            self.cart_service.add_product_to_cart(cart, product, quantity)
+            messages.success(request, f'{product.title} has been added to your cart.')
+            return redirect('cart_page')  
+        
+        except Exception as e:
+            # Log the error and show a generic message to the user
+            logger.error(f"Error adding product {product_id} to cart: {str(e)}")
+            messages.error(request, "An error occurred while adding the product to your cart. Please try again.")
+            return redirect('product_list')  # Redirect to the product list or another page
 
-        # Add the product to the cart
-        self.cart_service.add_product_to_cart(cart, product, quantity)
-
-        return redirect('cart_page')  # Redirect to the cart page
-    
+        
 
 
 
@@ -75,7 +91,9 @@ class UpdateCartItemView(View):
             quantity = int(request.POST.get('quantity', 1))
 
         # Update the cart item quantity using the CartItemService
-            self.cart_service.update_cart_item_quantity(item_id, quantity)
+            item,message=self.cart_service.update_cart_item_quantity(item_id, quantity)
+
+            messages.info(request, message)
 
         except Exception as e:
             # Handle the case where the cart item is not found

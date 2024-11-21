@@ -14,8 +14,6 @@ from shopping_site.application.authentication.services import UserApplicationSer
 from django.contrib import messages
 from django.views.generic import TemplateView
 from shopping_site.infrastructure.logger.models import logger
-from datetime import datetime, timedelta
-
 import jwt
 
 

@@ -3,6 +3,19 @@
 {% block title %}{{ product.title }}{% endblock %}
 
 {% block content %}
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+        {% if message.level == 40 %} <!-- Error message -->
+            <li class="alert alert-danger">{{ message }}</li>
+        {% elif message.level == 25 %} <!-- Success message -->
+            <li class="alert alert-success">{{ message }}</li>
+        {% else %}
+            <li class="alert alert-info">{{ message }}</li> <!-- Other types of messages -->
+        {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
     <div class="row">
         <div class="col-md-6">
             <img src="{{ product.image.url }}" class="img-fluid" alt="{{ product.title }}">
@@ -18,7 +31,7 @@
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="quantity" class="form-label">Quantity</label>
-                    <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" >
+                    <input type="number" class="form-control" id="quantity" name="quantity" value="1">
                     
                     <!-- Custom Error Message -->
                     <div id="error-message" class="text-danger d-none">
@@ -42,6 +55,12 @@
             // Reset the error message display
             errorMessage.classList.add('d-none');
 
+            // Check if the entered quantity is a positive integer greater than 0
+            if (quantity <= 0) {
+                errorMessageQuantity.classList.remove('d-none');
+                event.preventDefault();
+                return;
+            }
             // Custom validation: Check if the entered quantity exceeds available stock
             if (quantity > maxQuantity) {
                 // Display custom error message

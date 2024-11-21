@@ -3,6 +3,19 @@
 {% block title %}Your Cart{% endblock %}
 
 {% block content %}
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+        {% if message.level == 40 %} <!-- Error message -->
+            <li class="alert alert-danger">{{ message }}</li>
+        {% elif message.level == 25 %} <!-- Success message -->
+            <li class="alert alert-success">{{ message }}</li>
+        {% else %}
+            <li class="alert alert-info">{{ message }}</li> <!-- Other types of messages -->
+        {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
 <div class="container">
     <h1>Your Cart</h1>
     <table class="table">
@@ -22,7 +35,7 @@
                 <td>
                     <form method="post" action="{% url 'update_cart_item' item.id %}">
                         {% csrf_token %}
-                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" required />
+                        <input type="number" name="quantity" value="{{ item.quantity }}"  />
                         <button type="submit" class="btn btn-warning">Update</button>
                     </form>
                 </td>

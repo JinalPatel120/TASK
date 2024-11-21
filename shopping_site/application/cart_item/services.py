@@ -3,6 +3,9 @@ from shopping_site.domain.cart_item.models import Cart, CartItem
 from django.db import IntegrityError
 from typing import List
 from shopping_site.infrastructure.logger.models import AttributeLogger
+from django.contrib.sessions.models import Session
+from django.utils.timezone import now
+import uuid
 
 class CartService:
     """
@@ -21,9 +24,25 @@ class CartService:
         return cart
 
   
-    def get_or_create_cart_for_anonymous_user(self,session_key:str) -> Cart:
+    # def get_or_create_cart_for_anonymous_user(self,session_key:str) -> Cart:
+    #     """Fetch or create a cart for an anonymous user based on session"""
+    #     print('session key',session_key)
+    #     cart, created = Cart.objects.get_or_create(session_key=session_key, is_active=True)
+    #     return cart
+
+    def get_or_create_cart_for_anonymous_user(self, session_key: str) -> Cart:
         """Fetch or create a cart for an anonymous user based on session"""
+        
+
+        if not session_key:
+            # Generate a new session key if none exists
+            session_key = str(uuid.uuid4())  # Generate a unique session key
+        
+        print('Session key:', session_key)
+        # Fetch or create a cart associated with the session_key
         cart, created = Cart.objects.get_or_create(session_key=session_key, is_active=True)
+        
+        # Return the cart
         return cart
 
 
@@ -63,12 +82,28 @@ class CartService:
         Update the quantity of an existing cart item
         """
         item = CartItem.objects.get(id=item_id)
+        product = item.product 
 
-        if quantity > 0:
-            item.quantity = quantity
+      
+
+        # Check if the requested quantity is more than the available stock
+        if quantity > product.quantity:
+            # Notify the user about the stock limitation (you could store this in a message system or directly return a message)
+            available_quantity = product.quantity
+            item.quantity = available_quantity
             item.save()
-        return item
 
+            # Optionally, return a message to notify the user that the quantity was adjusted
+            return item, f"Only {available_quantity} items were available, so the quantity has been updated."
+        else:
+            # Update the cart item if the requested quantity is valid
+            if quantity > 0:
+                item.quantity = quantity
+                item.save()
+                return item, f"Cart item {product} quantity updated successfully."
+
+        # In case of invalid quantity (e.g., negative or zero)
+        return item, "Quantity must be a positive number."
 
     def remove_cart_item(self,item_id:int):
         """

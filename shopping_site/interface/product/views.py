@@ -11,6 +11,7 @@ from django.views import View
 from shopping_site.infrastructure.logger.models import logger
 
 
+
 class ProductCreateView(FormView):
     """
     Create a new product using Django's FormView.
@@ -49,6 +50,7 @@ class ProductCreateView(FormView):
 
 
 class ProductListView(FormView):
+
     """
     List all products with an optional form for filtering.
     """
