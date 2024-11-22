@@ -1,0 +1,51 @@
+<!-- templates/order_summary.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Summary</title>
+  
+</head>
+<body>
+    <div class="container">
+        <h1>Order Summary</h1>
+
+        <!-- Display Order Details -->
+        <div class="order-details">
+            <h2>Order #{{ order_details.id }}</h2>
+            <h3>Customer: {{ order_details.user.username }}</h3>
+
+            <table class="order-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order_details.items %}
+                    <tr>
+                        <td>{{ item.product.title }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.product.price }}</td>
+                        <td>{{ item.product.price }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="total">
+                <h3>Total: ${{ order_details.total }}</h3>
+            </div>
+        </div>
+
+        <a href="{% url 'order_list' %}" class="btn btn-primary">View All Orders</a>
+    </div>
+
+
+</body>
+</html>

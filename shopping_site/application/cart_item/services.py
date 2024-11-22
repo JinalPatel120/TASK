@@ -18,18 +18,15 @@ class CartService:
         self.log = log  # Store the logger instance
 
 
-
     def get_or_create_cart_for_user(self,user) -> Cart:
         """Fetch or create a cart for a logged-in user"""
         cart, created = Cart.objects.get_or_create(user=user, is_active=True)
         return cart
 
-  
 
     def get_or_create_cart_for_anonymous_user(self, session_key: str) -> Cart:
         """Fetch or create a cart for an anonymous user based on session"""
         
-
         if not session_key:
             # Generate a new session key if none exists
             session_key = str(uuid.uuid4())  # Generate a unique session key
@@ -40,7 +37,6 @@ class CartService:
         
         # Return the cart
         return cart
-
 
     def add_product_to_cart(self,cart:Cart, product:Product, quantity:int) -> CartItem:
         """Add or update product quantity in the cart"""
@@ -54,24 +50,6 @@ class CartService:
         cart_item.save()
         cart.update_total()
         return cart_item
-
- 
- 
-    # def get_cart_items(self,user, request) -> List[CartItem]:
-    #     """
-    #     Retrieve all items in the user's cart (authenticated or anonymous).
-    #     """
-    #     # Check if the user is authenticated
-    #     if user.is_authenticated:
-    #         # For authenticated users, fetch the cart using user UUID
-    #         cart = Cart.objects.filter(user=user).first()
-    #     else:
-    #         # For anonymous users, use the session key from request
-    #         session_key = request.session.session_key if request.session.session_key else None
-    #         cart = Cart.objects.filter(session_key=session_key).first()
-            
-
-    #     return cart.items.all() if cart else []
 
 
     def get_cart_items(self, user, request) -> List[CartItem]:
@@ -104,8 +82,6 @@ class CartService:
         item = CartItem.objects.get(id=item_id)
         product = item.product 
 
-      
-
         # Check if the requested quantity is more than the available stock
         if quantity > product.quantity:
             # Notify the user about the stock limitation (you could store this in a message system or directly return a message)
@@ -113,7 +89,6 @@ class CartService:
             item.quantity = available_quantity
             item.save()
 
-            # Optionally, return a message to notify the user that the quantity was adjusted
             return item, f"Only {available_quantity} items were available, so the quantity has been updated."
         else:
             # Update the cart item if the requested quantity is valid

@@ -78,6 +78,7 @@ THIRD_PARTY_APPS = [
     "drf_yasg",
     "widget_tweaks",
     'debug_toolbar',
+    'fontawesomefree'
 ]
 
 INSTALLED_APPS = SYSTEM_APPS + USER_APPS + THIRD_PARTY_APPS

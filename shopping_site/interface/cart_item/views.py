@@ -41,7 +41,6 @@ class AddToCartView(View):
           
             # Return updated cart count
             cart_count = self.cart_service.get_cart_item_count(cart)
-            messages.success(request, f"Product {product.title} has been {'added to' if quantity == 1 else 'updated in'} your cart!")
             message= f"Product {product.title} has been {'added to' if quantity == 1 else 'updated in'} your cart!"
             return JsonResponse({ 'cart_count': cart_count,'message': message})
 
@@ -69,33 +68,6 @@ class UpdateCartCountView(View):
             return JsonResponse({'cart_count': cart_count})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-
-
-# class CartView(View):
-#     cart_service = CartService(log=logger)
-
-#     def get(self, request):
-#         """
-#         Handles the GET request for displaying the cart.
-#         """
-#         try:
-#             # Fetch the cart items for the user
-#             cart_items = self.cart_service.get_cart_items(request.user, request)
-
-#             # Calculate the total cost of the cart
-#             total = sum(item.total_price for item in cart_items)
-        
-#             # Get cart item count
-     
-#             return render(request, 'view_cart.html', {
-#                 'cart_items': cart_items,
-#                 'total': total,
-            
-#             })
-#         except Exception as e:
-#             logger.error(f"An error occurred: {str(e)}")
-#             messages.error(self.request, "An error occurred while processing your request.")
-#             return redirect('product_list')  # Redirect to the product listing if no cart is found
 
 class CartView(View):
     cart_service = CartService(log=logger)

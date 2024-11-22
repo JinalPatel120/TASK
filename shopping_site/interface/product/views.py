@@ -85,15 +85,14 @@ class ProductListView(FormView):
                 min_price=min_price,
                 max_price=max_price,
                 # page=int(request.GET.get("page", 1)),  # Get the current page from the request
-                # page_size=9, 
+                # page_size=9,
             )
 
             logger.info(
                 f"Filtered products with query: {search_query}, min_price: {min_price}, max_price: {max_price}"
             )
 
-            
-            paginator = Paginator(product_data, 9)  
+            paginator = Paginator(product_data, 9)
             page = request.GET.get("page", 1)
 
             try:

@@ -3,6 +3,8 @@
 from django.urls import path
 from .views import ProductListView, ProductDetailView, ProductSearchView, ProductCreateView, ProductUpdateView, ProductDeleteView
 from shopping_site.interface.cart_item.views import AddToCartView,CartView,UpdateCartItemView,RemoveCartItemView,UpdateCartCountView
+from shopping_site.interface.orders.views import CheckoutView,order_summary_view
+
 
 urlpatterns = [
     path('', ProductListView.as_view(), name='product_list'),
@@ -16,5 +18,7 @@ urlpatterns = [
     path('cart/', CartView.as_view(), name='cart_page'),
     path('cart/update/<int:item_id>/', UpdateCartItemView.as_view(), name='update_cart_item'),  # Update cart item
     path('cart/remove/<int:item_id>/', RemoveCartItemView.as_view(), name='remove_cart_item'), 
+    path('checkout/', CheckoutView.as_view(), name='checkout'),
+    path('order_summary/<str:order_id>/', order_summary_view, name='order_summary'),
     
 ]
