@@ -3,6 +3,9 @@
 from shopping_site.domain.product.models import ProductFactory
 from shopping_site.domain.product.models import Product
 from typing import List,Type
+from django.db import connection
+
+
 
 
 
@@ -25,6 +28,8 @@ class ProductService:
         """
         try:
             product=Product.objects.get(id=product_id)
+ 
+            print(connection.queries,'configure sql queries')
             return product
         except Product.DoesNotExist:
             raise ValueError(f"Product with ID {product_id} does not exist.")

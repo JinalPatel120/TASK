@@ -6,9 +6,10 @@ import logging
 import json
 from django.utils.timezone import now
 import os
+from shopping_site.settings import logger
 
-# Get the logger for the application
-logger = logging.getLogger('django')
+# # Get the logger for the application
+# logger = logging.getLogger('django')
 
 class SqlLoggerMiddleware(MiddlewareMixin):
     def process_request(self, request):
@@ -29,7 +30,7 @@ class SqlLoggerMiddleware(MiddlewareMixin):
         if sql_queries:
             logger.info("SQL Queries executed during this request:")
             for query in sql_queries:
-                logger.info(f" <--- {query['sql']} ---> \n")
+                logger.info(f" <----- {query['sql']} ------> \n")
         else:
             logger.info("No SQL queries executed during this request.")
    

@@ -77,6 +77,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "drf_yasg",
     "widget_tweaks",
+    'debug_toolbar',
 ]
 
 INSTALLED_APPS = SYSTEM_APPS + USER_APPS + THIRD_PARTY_APPS
@@ -90,10 +91,23 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # 'shopping_site.infrastructure.middleware.SqlLoggerMiddleware'
+    'shopping_site.infrastructure.middleware.SqlLoggerMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 # if DEBUG:
 #     MIDDLEWARE.append('shopping_site.infrastructure.middleware.SqlLoggerMiddleware')
+
+
+# Add Debug Toolbar configuration
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG,
+}
+
+# Only show the debug toolbar when DEBUG is True
+if DEBUG:
+    INTERNAL_IPS = [
+        '127.0.0.1',
+    ]
 
 
 ROOT_URLCONF = "shopping_site.urls"

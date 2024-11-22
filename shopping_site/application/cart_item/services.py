@@ -6,6 +6,7 @@ from shopping_site.infrastructure.logger.models import AttributeLogger
 from django.contrib.sessions.models import Session
 from django.utils.timezone import now
 import uuid
+from django.db.models import F, ExpressionWrapper, DecimalField
 
 class CartService:
     """
@@ -24,11 +25,6 @@ class CartService:
         return cart
 
   
-    # def get_or_create_cart_for_anonymous_user(self,session_key:str) -> Cart:
-    #     """Fetch or create a cart for an anonymous user based on session"""
-    #     print('session key',session_key)
-    #     cart, created = Cart.objects.get_or_create(session_key=session_key, is_active=True)
-    #     return cart
 
     def get_or_create_cart_for_anonymous_user(self, session_key: str) -> Cart:
         """Fetch or create a cart for an anonymous user based on session"""
@@ -61,21 +57,44 @@ class CartService:
 
  
  
-    def get_cart_items(self,user, request) -> List[CartItem]:
+    # def get_cart_items(self,user, request) -> List[CartItem]:
+    #     """
+    #     Retrieve all items in the user's cart (authenticated or anonymous).
+    #     """
+    #     # Check if the user is authenticated
+    #     if user.is_authenticated:
+    #         # For authenticated users, fetch the cart using user UUID
+    #         cart = Cart.objects.filter(user=user).first()
+    #     else:
+    #         # For anonymous users, use the session key from request
+    #         session_key = request.session.session_key if request.session.session_key else None
+    #         cart = Cart.objects.filter(session_key=session_key).first()
+            
+
+    #     return cart.items.all() if cart else []
+
+
+    def get_cart_items(self, user, request) -> List[CartItem]:
         """
         Retrieve all items in the user's cart (authenticated or anonymous).
         """
-        # Check if the user is authenticated
-        if user.is_authenticated:
-            # For authenticated users, fetch the cart using user UUID
-            cart = Cart.objects.filter(user=user).first()
-        else:
-            # For anonymous users, use the session key from request
-            session_key = request.session.session_key if request.session.session_key else None
-            cart = Cart.objects.filter(session_key=session_key).first()
-            print('cart items',cart.items.all() if cart else [])
+        cart = Cart.objects.filter(
+            user=user if user.is_authenticated else None,
+            session_key=request.session.session_key if not user.is_authenticated else None
+        ).first()
 
-        return cart.items.all() if cart else []
+
+        if cart:
+            # Fetch cart items with related products and annotate total_price in the query
+            cart_items = CartItem.objects.filter(cart=cart).select_related('product').annotate(
+                total_price=ExpressionWrapper(
+                    F('quantity') * F('product__price'),
+                    output_field=DecimalField()
+                )
+            )
+            return cart_items
+        return []
+
     
     
     def update_cart_item_quantity(self,item_id:int, quantity:int) -> CartItem:
@@ -113,13 +132,25 @@ class CartService:
         item = CartItem.objects.get(id=item_id)
         item.delete()
 
+
+
     def get_cart_item_count(self, cart):
         """
         This method returns the total number of items in the cart.
         It sums the quantity of each product in the cart.
         """
-        # Ensure `cart.items` is a queryset and not a RelatedManager
-        cart_items = cart.items.all()  # Use .all() to fetch the related items
+        try:
+            # Ensure cart is a valid Cart object and check if it has related CartItems
+            if cart and hasattr(cart, 'items'):
+                cart_items = cart.items.all()  # Use .all() to fetch the related items
 
-        # Now, sum the quantities of the items in the cart
-        return sum(item.quantity for item in cart_items)
+   
+
+                # Now, sum the quantities of the items in the cart
+                return sum(item.quantity for item in cart_items)
+            else:
+                return 0
+        except Exception as e:
+            # Log the error if something goes wrong
+   
+            return 0

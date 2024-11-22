@@ -4,7 +4,9 @@ from shopping_site.domain.product.services import ProductService
 from shopping_site.domain.product.models import Product
 from typing import Dict, List
 from shopping_site.infrastructure.logger.models import AttributeLogger
-from django.db.models import Q
+from django.db.models import Q,Count
+from django.db.models.expressions import Subquery
+
 class ProductApplicationService:
     """
     Application service class responsible for handling the business logic
@@ -15,6 +17,41 @@ class ProductApplicationService:
     
     def __init__(self, log: AttributeLogger) -> None:
         self.log = log  # Store the logger instance
+
+    
+    def create_product(self, data: Dict) -> Product:
+        """
+        Creates a new product using the provided data.
+        
+        Args:
+            data (dict): The data used to create the product.
+
+        Returns:
+            Product: The newly created product or an error message if failed.
+        """
+        try:
+            # Log the creation attempt
+            self.log.info(f"Attempting to create product with title: {data['title']}")
+            
+            # Proceed to create the new product if no duplicate found
+            product_factory = ProductService.get_product_factory()
+            product = product_factory.build_entity_with_id(
+                title=data["title"],
+                description=data["description"],
+                price=data["price"],
+                quantity=data["quantity"],
+                image=data["image"]
+            )
+            
+            product.save()
+            self.log.info(f"Product with title '{data['title']}' created successfully (ID: {product.id})")
+            return product
+
+        except Exception as e:
+            self.log.error(f"Error creating product: {str(e)}")
+            return f"An unexpected error occurred: {str(e)}"
+        
+
 
     @staticmethod
     def get_product_by_id(product_id: str) -> Product:
@@ -54,45 +91,6 @@ class ProductApplicationService:
             raise ValueError("Product not found")
         return product
     
-
-    def create_product(self, data: Dict) -> Product:
-        """
-        Creates a new product using the provided data.
-        
-        Args:
-            data (dict): The data used to create the product.
-
-        Returns:
-            Product: The newly created product or an error message if failed.
-        """
-        try:
-            # Log the creation attempt
-            self.log.info(f"Attempting to create product with title: {data['title']}")
-
-            # Check if a product with the same title already exists
-            if Product.objects.filter(title=data["title"]).exists():
-                error_message = f"A product with the title '{data['title']}' already exists."
-                self.log.warning(error_message) 
-                return error_message
-            
-            # Proceed to create the new product if no duplicate found
-            product_factory = ProductService.get_product_factory()
-            product = product_factory.build_entity_with_id(
-                title=data["title"],
-                description=data["description"],
-                price=data["price"],
-                quantity=data["quantity"],
-                image=data["image"]
-            )
-            
-            product.save()
-            self.log.info(f"Product with title '{data['title']}' created successfully (ID: {product.id})")
-            return product
-
-        except Exception as e:
-            self.log.error(f"Error creating product: {str(e)}")
-            return f"An unexpected error occurred: {str(e)}"
-        
 
 
     @staticmethod
@@ -167,34 +165,64 @@ class ProductApplicationService:
         """
         return ProductService.search_products(query)
     
-    # def filter_products(self, search_query: str):
+
+    # def filter_products(self, search_query: str, min_price: int = None, max_price: int = None):
     #     """
     #     Filters products based on the search query. Searches by title and description.
+    #     Optionally filters by price range if min_price or max_price are provided.
+    #     If both search query and price filters are provided, applies both conditions.
     #     """
     #     try:
-    #         # Perform the search by matching the search query in product title or description
-    #         filtered_products = Product.objects.filter(
-    #             title__icontains=search_query
-    #         ) | Product.objects.filter(
-    #             description__icontains=search_query
-    #         ) 
+    #         # Start with the base query for title and description search
+    #         query = Q(title__icontains=search_query) | Q(description__icontains=search_query)
+
+    #         # Apply price filters if provided (using ternary-like logic)
+    #         if min_price:
+    #             query &= Q(price__gte=min_price)  # Filter for price greater than or equal to min_price
+
+    #         if max_price:
+    #             query &= Q(price__lte=max_price)  # Filter for price less than or equal to max_price
+
+    #         # Perform the filter with the combined query
+    #         filtered_products = Product.objects.filter(query).order_by("id")
 
     #         return filtered_products
     #     except Exception as e:
     #         self.log.error(f"Error filtering products: {str(e)}")
-    #         raise
+    #         raise e
 
 
-    def filter_products(self, search_query='', min_price=None, max_price=None):
-        products = Product.objects.all()
 
-        if search_query:
-            products = products.filter(title__icontains=search_query)
+    def filter_products(self, search_query: str, min_price: int = None, max_price: int = None):
+        """
+        Filters products based on the search query and price range. It combines both the product fetch and 
+        count operations in a single query.
+        """
+        try:
+            # Start with the base query for title and description search
+            query = Q(title__icontains=search_query) | Q(description__icontains=search_query)
 
-        if min_price is not None:
-            products = products.filter(price__gte=min_price)
+            if min_price:
+                query &= Q(price__gte=min_price) 
 
-        if max_price is not None:
-            products = products.filter(price__lte=max_price)
+            if max_price:
+                query &= Q(price__lte=max_price) 
+        
+            products = Product.objects.filter(query).order_by('id') \
+                .annotate(
+                    total_count=Subquery(
+                        Product.objects.filter(query).values('id').annotate(count=Count('id')).values('count')[:1]
+                    ))
+                # )[(page - 1) * page_size:page * page_size]
 
-        return products
+       
+            # total_count = products[0].total_count if products else 0
+
+            # print('products : ',products,'total count',total_count)
+            return products
+
+        except Exception as e:
+            self.log.error(f"Error filtering products: {str(e)}")
+            raise e
+
+

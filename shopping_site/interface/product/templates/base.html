@@ -39,8 +39,13 @@
                     </li>
                     {% endif %}
 
-                    <i class="cart-icon">🛒</i>
-                <span id="cart-count" class="cart-item-count">{{ cart_count|default:0 }}</span>
+                   <!-- Cart Icon and Count -->
+                   <li class="nav-item">
+                    <a class="nav-link" href="{% url 'cart_page' %}">
+                        <i class="cart-icon">🛒</i>
+                        <span id="cart-count">{{ cart_count }}</span>
+                    </a>
+                </li>
                 
                     </li>
                     
