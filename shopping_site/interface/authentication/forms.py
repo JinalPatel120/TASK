@@ -1,6 +1,7 @@
+#shopping_site/interface/authentications/forms.py
 from django import forms
 from django.core.exceptions import ValidationError
-from shopping_site.domain.authentication.models import User
+from shopping_site.domain.authentication.models import User,UserAddress
 import re
 
 class RegistrationForm(forms.ModelForm):
@@ -140,3 +141,19 @@ class ResetPasswordForm(forms.Form):
                 raise forms.ValidationError("Passwords do not match.")
     
 
+
+class UserAddressForm(forms.ModelForm):
+    class Meta:
+        model = UserAddress
+        fields = ['full_name', 'mobile_number', 'flat_building', 'area', 'landmark', 'pincode', 'city', 'state']
+
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'mobile_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'flat_building': forms.TextInput(attrs={'class': 'form-control'}),
+            'area': forms.TextInput(attrs={'class': 'form-control'}),
+            'landmark': forms.TextInput(attrs={'class': 'form-control'}),
+            'pincode': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'state': forms.TextInput(attrs={'class': 'form-control'}),
+        }

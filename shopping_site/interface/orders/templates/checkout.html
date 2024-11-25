@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <style>
+        .container {
+            max-width: 1000px;
+            margin-top: 20px;
+        }
+        .checkout-section {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container checkout-section">
+        <h1 class="text-center">Checkout</h1>
+        
+        <!-- Display messages if any -->
+        {% if messages %}
+            <div class="alert alert-info" role="alert">
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <form action="{% url 'checkout' %}" method="POST" novalidate>
+            {% csrf_token %}
+            <div class="row">
+                <!-- Shipping Address Column (Left) -->
+                <div class="col-md-6">
+                    <h3>Shipping Address</h3>
+                    <div class="form-group">
+                        <label for="full_name">Full Name:</label>
+                        <input type="text" class="form-control" id="full_name" name="full_name" value="{{ user_first_name }} {{ user_last_name }}" required>
+                        <div class="invalid-feedback">
+                            Please provide your full name.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mobile_number">Mobile Number:</label>
+                        <input type="text" class="form-control" id="mobile_number" name="mobile_number" pattern="^\d{10}$" required>
+                        <div class="invalid-feedback">
+                            Please provide a valid 10-digit mobile number.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="flat_building">Flat/Building:</label>
+                        <input type="text" class="form-control" id="flat_building" name="flat_building"  required>
+                        {% if form.flat_building.errors %}
+                            <div class="text-danger">
+                                {% for error in form.flat_building.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="area">Area:</label>
+                        <input type="text" class="form-control" id="area" name="area" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="landmark">Landmark:</label>
+                        <input type="text" class="form-control" id="landmark" name="landmark" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pincode">Pincode:</label>
+                        <input type="text" class="form-control" id="pincode" name="pincode" pattern="^\d{6}$" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="city">City:</label>
+                        <input type="text" class="form-control" id="city" name="city" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="state">State:</label>
+                        <input type="text" class="form-control" id="state" name="state" required>
+                    </div>
+                </div>
+
+                <!-- Cart Items Column (Right) -->
+                <div class="col-md-6">
+                    <h3>Your Cart</h3>
+                    <ul class="list-group mb-4">
+                        {% for item in cart_items %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ item.quantity }} x {{ item.product.name }}
+                                <span>₹{{ item.total_price }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <p class="lead">Total: ₹{{ total }}</p>
+                    <button type="submit" class="btn btn-primary btn-block">Confirm Order</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js (for form validation and other Bootstrap functionality) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- Custom Validation Script -->
+    <script>
+        // Form validation using Bootstrap 4
+        (function() {
+            'use strict';
+            window.addEventListener('load', function() {
+                var forms = document.getElementsByTagName('form');
+                var validation = Array.prototype.filter.call(forms, function(form) {
+                    form.addEventListener('submit', function(event) {
+                        if (form.checkValidity() === false) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        form.classList.add('was-validated');
+                    }, false);
+                });
+            }, false);
+        })();
+    </script>
+</body>
+</html>
+{% endblock %}

@@ -5,7 +5,7 @@ from django.db import transaction
 from typing import List, Type
 from django.db import connection
 from shopping_site.domain.order.services import OrderService
-from shopping_site.domain.cart_item.models import CartItem
+from shopping_site.domain.cart_item.models import CartItem,Cart
 
 class OrderApplicationService:
     """
@@ -43,31 +43,37 @@ class OrderApplicationService:
             ValidationError: If any of the items are invalid.
         """
         # Fetch cart items
-        cart_items = CartItem.objects.filter(user=user, is_active=True)
+  
+        cart_items = CartItem.objects.filter(cart__user=user, cart__is_active=True)
         
         # Calculate total price
         total_price = sum(item.product.price * item.quantity for item in cart_items)
-        
+      
         # Create the order
         order = Orders.objects.create(
             user=user,
             shipping_address=shipping_address,
-            total_price=total_price,
+            total_amount=total_price,
             status='Pending'
         )
 
+   
         # Create order items
         for item in cart_items:
             OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 quantity=item.quantity,
-                total_price=item.product.price * item.quantity
+                price=item.product.price * item.quantity
             )
         
-        # Clear the cart items
-        cart_items.update(is_active=False)
 
+        # Clear the cart items
+        user_cart = Cart.objects.filter(user=user, is_active=True).first()
+        if user_cart:
+            user_cart.is_active = False
+            user_cart.save()
+   
         return order
 
 

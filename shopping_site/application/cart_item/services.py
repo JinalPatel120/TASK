@@ -1,5 +1,6 @@
 from shopping_site.domain.product.models import Product
 from shopping_site.domain.cart_item.models import Cart, CartItem
+from shopping_site.domain.authentication.models import User
 from django.db import IntegrityError
 from typing import List
 from shopping_site.infrastructure.logger.models import AttributeLogger
@@ -51,7 +52,13 @@ class CartService:
         cart.update_total()
         return cart_item
 
-
+    def get_user_details_by_username(self,username):
+        try:
+            user = User.objects.get(username=username)
+            print('user',user)
+            return user.first_name, user.last_name
+        except User.DoesNotExist:
+            return None, None
     def get_cart_items(self, user, request) -> List[CartItem]:
         """
         Retrieve all items in the user's cart (authenticated or anonymous).
@@ -61,7 +68,7 @@ class CartService:
             session_key=request.session.session_key if not user.is_authenticated else None
         ).first()
 
-
+       
         if cart:
             # Fetch cart items with related products and annotate total_price in the query
             cart_items = CartItem.objects.filter(cart=cart).select_related('product').annotate(

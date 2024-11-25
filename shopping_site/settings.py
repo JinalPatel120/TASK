@@ -92,7 +92,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'shopping_site.infrastructure.middleware.SqlLoggerMiddleware',
+    # 'shopping_site.infrastructure.middleware.SqlLoggerMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 # if DEBUG:

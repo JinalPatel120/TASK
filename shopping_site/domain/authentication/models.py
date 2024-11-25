@@ -71,6 +71,28 @@ class User(AbstractUser):
         db_table = "user"
 
 
+
+class UserAddress(models.Model):
+    """
+    Represents a User's Address in the Domain Layer.
+    """
+    user = models.ForeignKey(User, related_name="address", on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=200)
+    mobile_number = models.CharField(max_length=15)
+    flat_building = models.CharField(max_length=255)
+    area = models.CharField(max_length=255)
+    landmark = models.CharField(max_length=255, blank=True)
+    pincode = models.CharField(max_length=6)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'user_addresses'
+
+    def __str__(self):
+        return f"{self.full_name} - {self.city}"
+
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     otp = models.CharField(max_length=6)

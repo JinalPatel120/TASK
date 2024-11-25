@@ -166,33 +166,6 @@ class ProductApplicationService:
         return ProductService.search_products(query)
     
 
-    # def filter_products(self, search_query: str, min_price: int = None, max_price: int = None):
-    #     """
-    #     Filters products based on the search query. Searches by title and description.
-    #     Optionally filters by price range if min_price or max_price are provided.
-    #     If both search query and price filters are provided, applies both conditions.
-    #     """
-    #     try:
-    #         # Start with the base query for title and description search
-    #         query = Q(title__icontains=search_query) | Q(description__icontains=search_query)
-
-    #         # Apply price filters if provided (using ternary-like logic)
-    #         if min_price:
-    #             query &= Q(price__gte=min_price)  # Filter for price greater than or equal to min_price
-
-    #         if max_price:
-    #             query &= Q(price__lte=max_price)  # Filter for price less than or equal to max_price
-
-    #         # Perform the filter with the combined query
-    #         filtered_products = Product.objects.filter(query).order_by("id")
-
-    #         return filtered_products
-    #     except Exception as e:
-    #         self.log.error(f"Error filtering products: {str(e)}")
-    #         raise e
-
-
-
     def filter_products(self, search_query: str, min_price: int = None, max_price: int = None):
         """
         Filters products based on the search query and price range. It combines both the product fetch and 
@@ -218,7 +191,6 @@ class ProductApplicationService:
        
             # total_count = products[0].total_count if products else 0
 
-            # print('products : ',products,'total count',total_count)
             return products
 
         except Exception as e:
