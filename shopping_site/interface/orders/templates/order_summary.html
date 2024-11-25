@@ -1,15 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Order Summary</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iH6V7yPC7Xt7lW9yJ5bLxdVYZ5Gi4QvG4I1z5I5y5pazZlIs5hH5GrH5T" crossorigin="anonymous">
-</head>
-<body>
-
 <div class="container my-5">
+<form method="POST" action="{% url 'place_order' %}">
+  {% csrf_token %}
     <h1>Order Summary</h1>
 
     <!-- Order Details -->
@@ -20,23 +13,35 @@
                 {% for item in cart_items %}
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{{ item.product.title }}</span>
-                        <span>{{ item.quantity }} x ${{ item.product.price }}</span>
+                        <span>{{ item.quantity }} x ₹{{ item.product.price }}</span>
                     </li>
                 {% endfor %}
             </ul>
             <hr>
             <div class="d-flex justify-content-between">
                 <strong>Total:</strong>
-                <strong>${{ total }}</strong>
+                <strong>₹{{ total }}</strong>
             </div>
         </div>
     </div>
 
-    
     <!-- Shipping Address -->
     <div class="mb-3">
         <h5>Shipping Address</h5>
-        <p>{{ shipping_address }}</p>
+        <!-- Display the list of addresses as radio buttons -->
+        {% for address in addresses %}
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="shipping_address" value="{{ address.id }}" id="address_{{ address.id }}">
+            <label class="form-check-label" for="address_{{ address.id }}">
+                {{ address.flat_building }}, {{ address.city }}, {{ address.pincode }}
+            </label>
+        </div>
+        {% empty %}
+        <p>No addresses found. Please add one.</p>
+        {% endfor %}
+        
+        <!-- Option to add a new address -->
+        <a href="{% url 'checkout' %}" class="btn btn-info">Add New Address</a>
     </div>
 
     <!-- Payment Methods -->
@@ -44,64 +49,58 @@
         <h5>Choose Payment Method</h5>
         <div class="form-check">
             <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" value="creditCard" checked>
-            <label class="form-check-label" for="creditCard">
-                Credit Card
-            </label>
+            <label class="form-check-label" for="creditCard">Credit Card</label>
         </div>
         <div class="form-check">
             <input class="form-check-input" type="radio" name="paymentMethod" id="paypal" value="paypal">
-            <label class="form-check-label" for="paypal">
-                PayPal
-            </label>
+            <label class="form-check-label" for="paypal">PayPal</label>
         </div>
         <div class="form-check">
             <input class="form-check-input" type="radio" name="paymentMethod" id="bankTransfer" value="bankTransfer">
-            <label class="form-check-label" for="bankTransfer">
-                Bank Transfer
-            </label>
+            <label class="form-check-label" for="bankTransfer">Bank Transfer</label>
         </div>
     </div>
 
-    <!-- Submit Order -->
     <button class="btn btn-primary" id="submitOrderBtn">Place Order</button>
-  
 
     <!-- Order Success Message -->
     <div id="orderSuccess" class="alert alert-success mt-3" style="display: none;">
         <strong>Success!</strong> Your order has been placed successfully.
     </div>
 </div>
-
-<!-- Bootstrap 5 JS -->
+</form>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz4fnFO9gybBtp5ZBdyWqB5cIuVZCxXwqdfgA1se3XqfJXrxpHu8u8mHm4" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js" integrity="sha384-pzjw8f+ua7Kw1TIq0d0zV/2QeqmT9T2ry9kUeRaxI5PpxjzI5fkmU6A5F5cV5d/F" crossorigin="anonymous"></script>
 
-<!-- Custom Script to Handle Order Submission -->
 <script>
-    document.getElementById('submitOrderBtn').addEventListener('click', function() {
-        // Get selected payment method
-        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-        
-        // Example: Registering the payment method (this would be backend in a real app)
-        alert('Payment Method Selected: ' + paymentMethod);
-        
-        // Simulate order placement and show success message
-        document.getElementById('orderSuccess').style.display = 'block';
-        
-        // You can also call an API to register the order here
-        // Example:
-        // fetch('/api/order', {
-        //     method: 'POST',
-        //     body: JSON.stringify({
-        //         paymentMethod: paymentMethod,
-        //         cartItems: cartItems,  // Pass the cart items and other details
-        //     })
-        // }).then(response => response.json())
-        //   .then(data => console.log(data));
-    });
-</script>
+document.getElementById('submitOrderBtn').addEventListener('click', function() {
+    // Check if an address is selected
+    const selectedAddress = document.querySelector('input[name="shipping_address"]:checked');
+    if (!selectedAddress) {
+        alert('Please select a shipping address before placing your order.');
+        return;
+    }
 
-</body>
-</html>
+    // Get selected payment method
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+
+    // Example: Registering the payment method (this would be backend in a real app)
+    alert('Payment Method Selected: ' + paymentMethod);
+
+    // Simulate order placement and show success message
+    document.getElementById('orderSuccess').style.display = 'block';
+
+    // You can also call an API to register the order here
+    fetch('/api/order', {
+        method: 'POST',
+        body: JSON.stringify({
+            paymentMethod: paymentMethod,
+            shippingAddress: selectedAddress.value,  
+            cartItems: cartItems,  
+        })
+    }).then(response => response.json())
+      .then(data => console.log(data));
+});
+</script>
 
 {% endblock %}

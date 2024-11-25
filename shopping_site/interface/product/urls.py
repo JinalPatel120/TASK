@@ -19,7 +19,7 @@ urlpatterns = [
     path('cart/remove/<int:item_id>/', RemoveCartItemView.as_view(), name='remove_cart_item'), 
     path('checkout/', CheckoutView.as_view(), name='checkout'),
     path('order/summary/', OrderSummaryView.as_view(), name='order_summary'),
-    path('order/place/', PlaceOrderView.as_view(), name='place_order'),
+    path('place-order/', PlaceOrderView.as_view(), name='place_order'),
     path('edit_address/', EditAddressView.as_view(), name='edit_address'),
     path('set_default_address/', SetDefaultAddressView.as_view(), name='set_default_address'),
     

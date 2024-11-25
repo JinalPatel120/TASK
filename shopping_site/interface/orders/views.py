@@ -29,7 +29,10 @@ class CheckoutView(View):
 
             # Retrieve saved address (if any) and default address logic
             saved_address = self.user_service.get_user_address(request.user)
-            default_address = self.user_service.get_default_address(request.user)  # Assuming a method to get default address
+            default_address = self.user_service.get_default_address(request.user)
+            # if saved_address:
+            #     return redirect('order_summary')
+
 
             # Initialize form with saved address data if present
             initial_data = {}
@@ -97,6 +100,8 @@ class CheckoutView(View):
 
 class OrderSummaryView(View):
     cart_service = CartService(log=logger)
+    user_service = UserApplicationService(log=logger)
+
 
     def get(self, request):
         try:
@@ -105,18 +110,20 @@ class OrderSummaryView(View):
                 messages.error(request, "Your cart is empty.")
                 return redirect('cart_page')
 
-            total = sum(item.total_price for item in cart_items)
+            total = sum(item.total_price for item in cart_items) 
+            addresses = self.user_service.get_user_addresses(request.user)
+          
             shipping_address = request.session.get('shipping_address', None)
-
+  
             if not shipping_address:
                 messages.error(request, "No shipping address found.")
                 return redirect('checkout')
 
-            print('shipping address',shipping_address)
             return render(request, 'order_summary.html', {
                 'cart_items': cart_items,
                 'total': total,
-                'shipping_address': shipping_address
+                'shipping_address': shipping_address,
+                'addresses': addresses, 
             })
         except Exception as e:
             logger.error(f"Error displaying order summary: {str(e)}")
@@ -125,26 +132,64 @@ class OrderSummaryView(View):
 
 
 
+# class PlaceOrderView(View):
+#     user_service = UserApplicationService(log=logger)
+
+#     def post(self, request):
+#         try:
+#             if request.user.is_authenticated:
+#                 # Retrieve the shipping address (assumed to be saved earlier)
+#                 # Either from session or directly from database.
+#                 address = request.session.get('shipping_address', None)
+
+#                 if not address:
+#                     messages.error(request, "No shipping address found. Please provide an address.")
+#                     return redirect('checkout')
+
+#                 # Create the order with the retrieved address
+#                 order = OrderApplicationService.create_order(request.user, address)
+
+#                 # If order creation was successful
+#                 messages.success(request, "Your order has been placed successfully!")
+#                 return redirect('order_summary')
+
+#             else:
+#                 messages.error(request, "You need to be logged in to place an order.")
+#                 return redirect('login')
+
+#         except Exception as e:
+#             logger.error(f"Error placing order: {str(e)}")
+#             messages.error(request, "An error occurred while placing your order.")
+#             return redirect('checkout')
+
 class PlaceOrderView(View):
     user_service = UserApplicationService(log=logger)
-
     def post(self, request):
+        print('hello1111111111111111111111')
+        print('request',request.POST)
         try:
             if request.user.is_authenticated:
-                # Retrieve the shipping address (assumed to be saved earlier)
-                # Either from session or directly from database.
-                address = request.session.get('shipping_address', None)
+                # Retrieve the shipping address from the form data
+                shipping_address_id = request.POST.get('shipping_address')
+                print('shipping addresss',shipping_address_id)
+                if not shipping_address_id:
+                    messages.error(request, "No shipping address selected. Please select one before placing your order.")
+                    return redirect('order_summary')  # Redirect back to order summary
 
+                print('heloooooooooooooooooooooooooooooooooooooooooooooooooo')
+                # Fetch the address details using the ID
+                address = self.user_service.get_address_by_id(request.user, shipping_address_id)
+                print('adfdfressssssssssssssssssssssssss',address)
                 if not address:
-                    messages.error(request, "No shipping address found. Please provide an address.")
-                    return redirect('checkout')
+                    messages.error(request, "Invalid shipping address.")
+                    return redirect('order_summary')
 
-                # Create the order with the retrieved address
+                # Proceed to create the order
                 order = OrderApplicationService.create_order(request.user, address)
-
+                print('order',order)
                 # If order creation was successful
                 messages.success(request, "Your order has been placed successfully!")
-                return redirect('order_summary')
+                return redirect('order_summary')  # Or you can redirect to an order confirmation page
 
             else:
                 messages.error(request, "You need to be logged in to place an order.")
@@ -158,17 +203,24 @@ class PlaceOrderView(View):
 
 
 
-
-
 class EditAddressView(View):
+    user_service = UserApplicationService(log=logger)
+
     def get(self, request):
         try:
-            # Retrieve the current address for the user
-            saved_address = user_service.get_user_address(request.user)
-            
+            address_id = request.GET.get('address_id')
+            if not address_id:
+                messages.error(request, "Invalid address ID.")
+                return redirect('checkout')
+
+            # Retrieve the address to edit
+            address = self.user_service.get_address_by_id(request.user, address_id)
+            if not address:
+                messages.error(request, "Address not found.")
+                return redirect('checkout')
+
             # Initialize the form with the current address data
-            form = UserAddressForm(instance=saved_address)
-            
+            form = UserAddressForm(instance=address)
             return render(request, 'edit_address.html', {'form': form})
 
         except Exception as e:
@@ -177,12 +229,12 @@ class EditAddressView(View):
 
     def post(self, request):
         try:
-            # Retrieve the current address for the user
-            saved_address = user_service.get_user_address(request.user)
-            
+            address_id = request.GET.get('address_id')
+            address = self.user_service.get_address_by_id(request.user, address_id)
+
             # Populate the form with POST data and the current address instance
-            form = UserAddressForm(request.POST, instance=saved_address)
-            
+            form = UserAddressForm(request.POST, instance=address)
+
             if form.is_valid():
                 # Save the updated address
                 form.save()
@@ -198,16 +250,16 @@ class EditAddressView(View):
             return redirect('checkout')
 
 
-user_service = UserApplicationService(log=logger)
-
 class SetDefaultAddressView(View):
+    user_service = UserApplicationService(log=logger)
+
     def post(self, request):
         try:
             # Get the user's current address
-            address = user_service.get_user_address(request.user)
+            address = self.user_service.get_user_address(request.user)
 
             # Set the retrieved address as the default
-            user_service.set_default_address(request.user, address)
+            self.user_service.set_default_address(request.user, address)
             
             messages.success(request, "Address has been set as default.")
             return redirect('order_summary')

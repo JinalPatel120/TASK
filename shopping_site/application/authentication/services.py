@@ -1,5 +1,5 @@
 # shopping_site/application/authentication/services.py
-from shopping_site.domain.authentication.models import User, OTP,UserAddress
+from shopping_site.domain.authentication.models import User, OTP, UserAddress
 from shopping_site.domain.authentication.services import UserServices
 from typing import Dict, Optional, Union
 from django.db import IntegrityError
@@ -44,12 +44,18 @@ class UserApplicationService:
             email_count=Count(Case(When(email=email, then=1))),
             username_count=Count(Case(When(username=username, then=1))),
         )
-        error_message="A user with this email address already exists." if user_exists["email_count"] > 0 else "A user with this username already exists."
-        log_error_message=f"Registration failed: User with email {email} already exists." if user_exists["email_count"] > 0 else f"Registration failed: User with username {username} already exists."
+        error_message = (
+            "A user with this email address already exists."
+            if user_exists["email_count"] > 0
+            else "A user with this username already exists."
+        )
+        log_error_message = (
+            f"Registration failed: User with email {email} already exists."
+            if user_exists["email_count"] > 0
+            else f"Registration failed: User with username {username} already exists."
+        )
         if user_exists["email_count"] > 0 or user_exists["username_count"] > 0:
-            self.log.error(
-                log_error_message
-            )
+            self.log.error(log_error_message)
             return error_message
         user = UserServices.get_user_factory().build_entity_with_id(
             username=username,
@@ -323,7 +329,7 @@ class UserApplicationService:
         if otp_record and otp_record.token is None:
             return True  # Token is invalid
         return False
-    
+
     def handle_otp_attempts(self, request: HttpRequest):
         """
         Handles the number of OTP attempts, blocking attempts if necessary and calculating the next retry time.
@@ -370,38 +376,17 @@ class UserApplicationService:
         next_attempt_time = timezone.now() + timedelta(seconds=next_attempt_seconds)
         request.session["next_attempt_time"] = next_attempt_time.isoformat()
         return next_attempt_seconds
-    
+
     def get_or_create_address(self, user, address_data):
         try:
-            # Check if the user already has an address
-            address, created = UserAddress.objects.get_or_create(
-                user=user,
-                defaults=address_data
-            )
-            if created:
-                self.log.info(f"New address created for user {user.username}")
-            else:
-                self.log.info(f"Using existing address for user {user.username}")
+            address = UserAddress.objects.create(user=user, **address_data)
+            self.log.info(f"New address created for user {user.username}")
             return address
         except Exception as e:
-            self.log.error(f"Error retrieving or creating address for user {user.username}: {str(e)}")
+            self.log.error(
+                f"Error retrieving or creating address for user {user.username}: {str(e)}"
+            )
             raise
-
-    # def get_user_address(self, user):
-    #     """
-    #     Retrieve the shipping address for a given user.
-    #     """
-    #     try:
-    #         address = UserAddress.objects.get(user=user)
-    #         print(address.flat_building,'flat building')
-    #         print('address',address)
-    #         if address:
-    #             return address
-    #         else:
-    #             raise ValueError("No address found for user.")
-    #     except Exception as e:
-    #         self.log.error(f"Error retrieving user address: {str(e)}")
-    #         raise ValueError("Could not retrieve address.")
 
     def get_user_address(self, user):
         """
@@ -409,11 +394,17 @@ class UserApplicationService:
         """
         try:
             # Retrieve specific fields from the UserAddress model
-            address_fields = UserAddress.objects.filter(user=user).values('flat_building', 'city', 'pincode')
+            address_fields = UserAddress.objects.filter(user=user).values(
+                "flat_building", "city", "pincode"
+            )
 
             if address_fields:
-                logger.info(f"Address found for user {user.username}: {address_fields[0]}")
-                return address_fields[0]  # Returning the first result (should only be one)
+                logger.info(
+                    f"Address found for user {user.username}: {address_fields[0]}"
+                )
+                return address_fields[
+                    0
+                ]  
             else:
                 logger.error(f"No address found for user {user.username}.")
                 return None
@@ -421,16 +412,69 @@ class UserApplicationService:
             logger.error(f"Error retrieving user address for {user.username}: {str(e)}")
             raise ValueError(f"Could not retrieve address for user {user.username}.")
         
+    def get_user_addresses(self, user):
+        """
+        Retrieve all shipping addresses for a given user.
+        """
+        try:
+            # Retrieve all addresses for the user
+            address_fields = UserAddress.objects.filter(user=user).values(
+                "id", "flat_building", "city", "pincode"
+            )
+
+            if address_fields:
+                logger.info(f"Found {len(address_fields)} addresses for user {user.username}.")
+                return address_fields  # Return all addresses
+            else:
+                logger.error(f"No addresses found for user {user.username}.")
+                return []  # Return an empty list if no addresses are found
+        except Exception as e:
+            logger.error(f"Error retrieving user addresses for {user.username}: {str(e)}")
+            raise ValueError(f"Could not retrieve addresses for user {user.username}.")
+
 
     def get_default_address(self, user):
         # Logic to retrieve the user's default address
         # You might want to check a flag or field in the database that indicates the default address.
         try:
             # Assuming you have an Address model with a `is_default` flag
-            return UserAddress.objects.filter(user=user, is_default=True).first()
+            default_address = UserAddress.objects.filter(
+                user=user, is_default=True
+            ).first()
+            if default_address is None:
+                self.log.warning(f"No default address found for user: {user.username}")
+
+            return default_address
+
         except Exception as e:
             self.log.error(f"Error fetching default address: {str(e)}")
             return None
+
+    def set_default_address(self, user, user_address):
+        try:
+            # Check if the provided address is already the default
+            if user_address.is_default:
+                self.log.info(
+                    f"Address {user_address.id} is already set as default for user {user.username}. No update needed."
+                )
+                return True  # No action needed if it's already the default
+
+            # Set the provided UserAddress as the default
+            user_address.is_default = True
+            user_address.save()
+
+            # Reset any other UserAddress instances to not default
+            user.address.exclude(id=user_address.id).update(is_default=False)
+
+            self.log.info(
+                f"Address {user_address.id} set as default for user {user.username}"
+            )
+            return True
+        except Exception as e:
+            self.log.error(
+                f"Error setting default address for user {user.username}: {str(e)}"
+            )
+            return False
 
     def update_address(self, user, address_data):
         try:
@@ -448,3 +492,10 @@ class UserApplicationService:
             self.log.error(f"Error updating address for user {user.username}: {str(e)}")
             raise
 
+    def get_address_by_id(self, user, address_id):
+        try:
+            # Assuming Address is a model that stores shipping addresses
+            return UserAddress.objects.filter(user=user, id=address_id).first()
+        except Exception as e:
+            self.log.error(f"Error fetching address: {str(e)}")
+            return None
