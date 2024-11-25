@@ -27,7 +27,6 @@ class OrderService:
         """
         try:
             order = Orders.objects.get(id=order_id)
-            print(connection.queries, 'configure SQL queries')
             return order
         except Orders.DoesNotExist:
             raise ValueError(f"Order with ID {order_id} does not exist.")

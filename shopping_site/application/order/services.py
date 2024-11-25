@@ -27,7 +27,7 @@ class OrderApplicationService:
 
        
     @staticmethod
-    def create_order(user, shipping_address):
+    def create_order(user,address):
         """
         This method creates a new order and order items.
 
@@ -52,7 +52,7 @@ class OrderApplicationService:
         # Create the order
         order = Orders.objects.create(
             user=user,
-            shipping_address=shipping_address,
+            shipping_address=address,
             total_amount=total_price,
             status='Pending'
         )
@@ -76,7 +76,13 @@ class OrderApplicationService:
    
         return order
 
-
+    def empty_cart(self, user):
+        try:
+            # Implement the logic to empty the user's cart
+            Cart.objects.filter(user=user).delete()
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error emptying cart: {str(e)}")
 
     @staticmethod
     def update_order_status(order_id: str, new_status: str) -> Orders:
@@ -132,3 +138,11 @@ class OrderApplicationService:
         """
         order = OrderService.get_order_by_id(order_id)
         order.delete()
+
+    def get_order_by_id(self,order_id:str):
+        order=OrderService.get_order_by_id(order_id)
+        return order
+    
+    def invoice_items(self,order:str):
+        return  OrderItem.objects.filter(order=order)
+    

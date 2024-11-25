@@ -1,0 +1,19 @@
+<!-- templates/order_confirmation.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <h1>Order Confirmation</h1>
+    <p>
+        <i class="fas fa-check-circle" style="color: green; font-size: 2em; vertical-align: middle;"></i>
+        Thank you for your order! Your order has been placed successfully.
+
+    </p>
+    {% if order_id %}
+<a href="{% url 'download_invoice' order_id=order_id %}">Download Invoice</a>
+{% else %}
+<p>Order ID is missing, cannot generate download link.</p>
+{% endif %}
+<a href="{% url 'cart_page' %}">Back</a>
+</div>
+{% endblock %}

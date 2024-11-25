@@ -292,13 +292,6 @@ class UserApplicationService:
             hashed_password = make_password(new_password)
             user.password = hashed_password
             user.save()
-            # Invalidate the OTP token
-            # otp_entry = OTP.objects.filter(user=user).first()
-            # print('hello from reset')
-            # if otp_entry:
-            #     otp_entry.token = None
-            #     otp_entry.save()
-
             self.log.info(f"Password reset successfully for user {email}")
         except User.DoesNotExist:
             self.log.error(
@@ -499,3 +492,20 @@ class UserApplicationService:
         except Exception as e:
             self.log.error(f"Error fetching address: {str(e)}")
             return None
+        
+    def remove_address(self, address_id: int) -> bool:
+        """
+        Removes an address by its ID.
+
+        Args:
+            address_id (int): The ID of the address to remove.
+
+        Returns:
+            bool: True if the address was removed, False if not found.
+        """
+        try:
+            address = UserAddress.objects.get(id=address_id)
+            address.delete()
+            return True
+        except ObjectDoesNotExist:
+            return False
