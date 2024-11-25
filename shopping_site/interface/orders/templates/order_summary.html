@@ -41,19 +41,21 @@
         </div>
 
         <!-- Shipping Address -->
-        <div class="mb-3">
-            <h5>Shipping Address</h5>
+        <h5>Shipping Address</h5>
+        <div class="card mb-3">
+          <div class="card-body">
+            
             {% for address in addresses %}
             <div class="form-check">
                 <input class="form-check-input" type="radio" name="shipping_address" value="{{ address.id }}" id="address_{{ address.id }}">
                 <label class="form-check-label" for="address_{{ address.id }}">
                     {{ address.flat_building }}, {{ address.city }}, {{ address.pincode }}
                 </label>
-                
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <!-- Edit Address Button -->
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editAddressModal" data-address-id="{{ address.id }}" data-flat-building="{{ address.flat_building }}" data-city="{{ address.city }}" data-pincode="{{ address.pincode }}">
                     Edit Address
-                </button>
+                </button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 
                 <!-- Remove Address Button -->
                 <button type="button" class="btn btn-danger btn-sm" data-address-id="{{ address.id }}" onclick="removeAddress(event)">
@@ -67,6 +69,7 @@
             <!-- Option to add a new address -->
             <a href="{% url 'checkout' %}" class="btn btn-info">Add New Address</a>
         </div>
+      </div>
 
         <!-- Payment Methods -->
         <div class="mb-3">

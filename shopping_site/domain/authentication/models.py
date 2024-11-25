@@ -85,7 +85,7 @@ class UserAddress(models.Model):
     pincode = models.CharField(max_length=6)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
-    is_default = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'user_addresses'

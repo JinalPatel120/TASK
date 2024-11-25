@@ -395,6 +395,7 @@ class UserApplicationService:
                 logger.info(
                     f"Address found for user {user.username}: {address_fields[0]}"
                 )
+              
                 return address_fields[
                     0
                 ]  
