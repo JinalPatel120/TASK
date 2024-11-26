@@ -48,17 +48,21 @@ class CheckoutView(View):
             logger.info(f"Total price calculated: {total}")
 
             saved_address = self.user_service.get_user_address(request.user)
-            default_address = self.user_service.get_default_address(request.user)
+            # default_address = self.user_service.get_default_address(request.user)
             if saved_address:
                 logger.info(f"Redirecting user {request.user.username} to order summary page.")
                 return redirect('order_summary')
 
+            print('saved address',saved_address)
             # Initialize form with saved address data if present
             initial_data = {}
             if saved_address:
                 initial_data = {
                     "flat_building": saved_address.get("flat_building", ""),
+                    "area":saved_address.get("area"," "),
+                    "landmark":saved_address.get("landmark",""),
                     "city": saved_address.get("city", ""),
+                    "state":saved_address.get("state",""),
                     "pincode": saved_address.get("pincode", ""),
                 }
 
@@ -75,7 +79,7 @@ class CheckoutView(View):
                     "user_last_name": user_last_name,
                     "form": form,
                     "saved_address": saved_address,
-                    "default_address": default_address,  # Add default address to context
+                    # "default_address": default_address, 
                 },
             )
 
@@ -104,7 +108,10 @@ class CheckoutView(View):
                 # Optionally, save the address to session
                 request.session["shipping_address"] = {
                     "flat_building": address.flat_building,
+                    "area":address.area,
+                    "landmark":address.landmark,
                     "city": address.city,
+                    "state":address.state,
                     "pincode": address.pincode,
                 }
 
@@ -196,8 +203,11 @@ class PlaceOrderView(View):
             if request.user.is_authenticated:
                 logger.info(f"User {request.user.username} is authenticated")
                 shipping_address_id = request.POST.get("shipping_address")
+                payment_method = request.POST.get("paymentMethod")
                 logger.debug(f"Shipping address ID received: {shipping_address_id}")
+                logger.debug(f"Payment method received: {payment_method}")
 
+            
 
                 if not shipping_address_id:
                     messages.error(
@@ -206,6 +216,14 @@ class PlaceOrderView(View):
                     )
                     logger.warning(f"No shipping address selected by user {request.user.username}")
                     return redirect("order_summary")  # Redirect back to order summary
+
+                if not payment_method:
+                    messages.error(
+                        request,
+                        "No payment method selected. Please select one before placing your order.",
+                    )
+                    logger.warning(f"No payment method selected by user {request.user.username}")
+                    return redirect("order_summary")
 
                 # Fetch the address details using the ID
                 address = self.user_service.get_address_by_id(
@@ -217,14 +235,36 @@ class PlaceOrderView(View):
                     logger.warning(f"Invalid shipping address ID {shipping_address_id} for user {request.user.username}")
                     return redirect("order_summary")
 
-                order = self.order_service.create_order(request.user, address)
+                order = self.order_service.create_order(request.user, address,payment_method=payment_method)
+                # if order:
+                #     self.order_service.empty_cart(request.user)
+                #     messages.success(
+                #         request, "Your order has been placed successfully!"
+                #     )
+                #     logger.info(f"Order {order.id} placed successfully for user {request.user.username}")
+                #     return redirect("order_confirmation", order_id=order.id)
+                
                 if order:
-                    self.order_service.empty_cart(request.user)
-                    messages.success(
-                        request, "Your order has been placed successfully!"
-                    )
-                    logger.info(f"Order {order.id} placed successfully for user {request.user.username}")
-                    return redirect("order_confirmation", order_id=order.id)
+                    # Loop through order items and update product stock
+                    for item in order.items.all():
+                        product = item.product
+                        if product.quantity >= item.quantity:
+                            # Update the stock by deducting the quantity of the ordered item
+                            product.quantity -= item.quantity
+                            product.save()
+                        else:
+                            # Optionally handle the case where there's insufficient stock
+                            messages.error(request, f"Insufficient stock for {product.title}. Please reduce quantity.")
+                            return redirect("order_summary")
+           
+                self.order_service.empty_cart(request.user)
+
+                # Show success message
+                messages.success(
+                    request, "Your order has been placed successfully!"
+                )
+                logger.info(f"Order {order.id} placed successfully for user {request.user.username}")
+                return redirect("order_confirmation", order_id=order.id)
 
             else:
                 messages.error(request, "You need to be logged in to place an order.")
@@ -343,9 +383,13 @@ class UpdateAddressView(View):
         data = json.loads(request.body)
         address_id = data.get("id")
         flat_building = data.get("flat_building")
+        area=data.get("area")
+        landmark=data.get("landmark")
         city = data.get("city")
+        
         pincode = data.get("pincode")
 
+       
         try:
             logger.info(f"Update address POST request initiated by user: {request.user.username}")
             user_service = UserApplicationService(
@@ -353,9 +397,14 @@ class UpdateAddressView(View):
             )  # Ensure `logger` is defined in your view or globally
             address = user_service.get_address_by_id(
                 request.user, address_id
-            )  # Get address using service
+            ) 
+            
+           
             address.flat_building = flat_building
+            address.area=area
+            address.landmark=landmark
             address.city = city
+
             address.pincode = pincode
             address.save()
             logger.debug(f"Received data for updating address ID {address_id} for user {request.user.username}")
@@ -366,44 +415,57 @@ class UpdateAddressView(View):
             return JsonResponse({"success": False, "message": "Address not found"})
 
 
+
 class OrderConfirmationView(TemplateView):
     """
     View class for displaying the order confirmation page.
     """
-
     template_name = "order_confirmation.html"
     order_service = OrderApplicationService()
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Override dispatch to handle the logic before rendering the template.
+        """
+        order_id = self.kwargs.get("order_id")
+
+        if not order_id:
+            logger.error("Order ID is required to render the order confirmation page.")
+            messages.error(self.request, "Order ID is required to render this page.")
+            return redirect("cart_page")  # Redirect if order_id is missing
+
+        try:
+            # Fetch the order using the updated method
+            order = self.order_service.get_order_by_id(order_id)
+        except ValueError as e:
+            # Log the error and show a user-friendly message
+            logger.error(f"Error fetching order with ID {order_id}: {str(e)}")
+            messages.error(self.request, str(e))  # Display the error message to the user
+            return redirect("cart_page")  # Redirect to the cart or home page
+
+        # If order exists, proceed to generate the context
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         """
         Retrieve context data for rendering the template.
         """
-
+        # Initialize context
         context = super().get_context_data(**kwargs)
         order_id = self.kwargs.get("order_id")
+
+        # Fetch the order again after redirect check in dispatch
         try:
-
-            if not order_id:
-                logger.error("Order ID is required to render the order confirmation page.")
-                raise ValueError("Order ID is required to render this page.")
-
             order = self.order_service.get_order_by_id(order_id)
-            if not order:
-                logger.error(f"Order with ID {order_id} not found.")
-                return redirect("cart_page")  # Assuming you have an error page
-
-            context["order_id"] = order_id
+        except ValueError:
+            # If order is not found, return empty context or an appropriate message
+            context['error_message'] = "The order with the specified ID does not exist."
+        else:
             context["order"] = order
-            logger.info(f"Order confirmation page loaded for order ID {order_id}.")
-            return context
-        except ValueError as ve:
-            logger.error(f"ValueError: {str(ve)}")
-            context["error_message"] = str(ve)
-            return redirect("cart_page")  # Assuming you have an error page
-        except Exception as e:
-            logger.error(f"Unexpected error occurred: {str(e)}")
-            context["error_message"] = "An unexpected error occurred. Please try again later."
-            return redirect("cart_page")  # Assuming you have an error page
+            context["order_id"] = order_id
+
+        logger.info(f"Order confirmation page loaded for order ID {order_id}.")
+        return context
 
 
 class DownloadInvoiceView(View):
@@ -498,9 +560,10 @@ class RemoveAddressView(View):
             JsonResponse: A JSON response indicating success or failure.
         """
         try:
+            print('hello from remove address')
             address_service = UserApplicationService(log=logger)
             success = address_service.remove_address(address_id)
-
+            print('success',success)
             if success:
                 logger.info(f"Address with ID {address_id} successfully removed.")
                 return JsonResponse({'success': True}, status=200)

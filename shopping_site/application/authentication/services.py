@@ -388,9 +388,10 @@ class UserApplicationService:
         try:
             # Retrieve specific fields from the UserAddress model
             address_fields = UserAddress.objects.filter(user=user).values(
-                "flat_building", "city", "pincode"
+                "flat_building", "area","landmark","city","pincode"
             )
 
+            print('address fileds',address_fields)
             if address_fields:
                 logger.info(
                     f"Address found for user {user.username}: {address_fields[0]}"
@@ -413,7 +414,7 @@ class UserApplicationService:
         try:
             # Retrieve all addresses for the user
             address_fields = UserAddress.objects.filter(user=user).values(
-                "id", "flat_building", "city", "pincode"
+                "id", "flat_building", "area","landmark","city","state", "pincode"
             )
 
             if address_fields:

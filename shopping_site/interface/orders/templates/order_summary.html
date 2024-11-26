@@ -49,16 +49,17 @@
             <div class="form-check">
                 <input class="form-check-input" type="radio" name="shipping_address" value="{{ address.id }}" id="address_{{ address.id }}">
                 <label class="form-check-label" for="address_{{ address.id }}">
-                    {{ address.flat_building }}, {{ address.city }}, {{ address.pincode }}
+                    {{ address.flat_building }}, {{ address.area}}, {{ address.landmark}} , {{ address.city }}, {{ address.state}} {{ address.pincode }}
                 </label>
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <!-- Edit Address Button -->
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editAddressModal" data-address-id="{{ address.id }}" data-flat-building="{{ address.flat_building }}" data-city="{{ address.city }}" data-pincode="{{ address.pincode }}">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editAddressModal" data-address-id="{{ address.id }}" data-flat-building="{{ address.flat_building }}" data-area="{{ address.area }}" data-landmark="{{ address.landmark }}" data-city="{{ address.city }}"  data-pincode="{{ address.pincode }}">
                     Edit Address
                 </button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 
+                
                 <!-- Remove Address Button -->
-                <button type="button" class="btn btn-danger btn-sm" data-address-id="{{ address.id }}" onclick="removeAddress(event)">
+                <button type="button" class="btn btn-danger btn-sm" data-address-id="{{ address.id }}" onclick="removeAddress(this)">
                     Remove Address
                 </button>
             </div>
@@ -72,21 +73,32 @@
       </div>
 
         <!-- Payment Methods -->
-        <div class="mb-3">
-            <h5>Choose Payment Method</h5>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" value="creditCard" checked>
-                <label class="form-check-label" for="creditCard">Credit Card</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="paymentMethod" id="paypal" value="paypal">
-                <label class="form-check-label" for="paypal">PayPal</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="paymentMethod" id="bankTransfer" value="bankTransfer">
-                <label class="form-check-label" for="bankTransfer">Bank Transfer</label>
-            </div>
-        </div>
+        <!-- Payment Methods -->
+<div class="mb-3">
+    <h5>Choose Payment Method</h5>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" value="creditCard" checked>
+        <label class="form-check-label" for="creditCard">Credit Card</label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="paymentMethod" id="paypal" value="paypal">
+        <label class="form-check-label" for="paypal">PayPal</label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="paymentMethod" id="bankTransfer" value="bankTransfer">
+        <label class="form-check-label" for="bankTransfer">Bank Transfer</label>
+    </div>
+
+    <!-- Cash on Delivery Option with UPI details -->
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="paymentMethod" id="cashOnDelivery" value="cashOnDelivery">
+        <label class="form-check-label" for="cashOnDelivery">
+            Cash on Delivery (COD)
+        </label>
+    </div>
+    
+</div>
+
 
         <button class="btn btn-primary" id="submitOrderBtn">Place Order</button>
 
@@ -111,9 +123,18 @@
                             <input type="text" class="form-control" id="flat_building" required>
                         </div>
                         <div class="mb-3">
+                            <label for="area" class="form-label">Area</label>
+                            <input type="text" class="form-control" id="area" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="landmark" class="form-label">Landmark</label>
+                            <input type="text" class="form-control" id="landmark" required>
+                        </div>
+                        <div class="mb-3">
                             <label for="city" class="form-label">City</label>
                             <input type="text" class="form-control" id="city" required>
                         </div>
+                       
                         <div class="mb-3">
                             <label for="pincode" class="form-label">Pincode</label>
                             <input type="text" class="form-control" id="pincode" required>
@@ -135,15 +156,26 @@
             var button = event.relatedTarget;
             var addressId = button.getAttribute('data-address-id');
             var flatBuilding = button.getAttribute('data-flat-building');
+            var area=button.getAttribute('data-area');
+            var landmark=button.getAttribute('data-landmark');
             var city = button.getAttribute('data-city');
+          
             var pincode = button.getAttribute('data-pincode');
 
+
+            console.log('address iddddddddddddddddddddddddddddddddddddd',addressId)
             var modalFlatBuilding = editAddressModal.querySelector('#flat_building');
+            var modalArea=editAddressModal.querySelector('#area');
+            var modalLandmark=editAddressModal.querySelector('#landmark');
             var modalCity = editAddressModal.querySelector('#city');
+          
             var modalPincode = editAddressModal.querySelector('#pincode');
 
             modalFlatBuilding.value = flatBuilding;
+            modalArea.value=area;
+            modalLandmark.value=landmark;
             modalCity.value = city;
+        
             modalPincode.value = pincode;
 
             // Handle form submission to update address
@@ -155,6 +187,8 @@
                 var updatedAddress = {
                     id: addressId,
                     flat_building: modalFlatBuilding.value,
+                    area:modalArea.value,
+                    landmark:modalArea.value,
                     city: modalCity.value,
                     pincode: modalPincode.value
                 };
@@ -186,35 +220,45 @@
         });
 
         // Remove Address Function
-        function removeAddress(event) {
-            var addressId = event.target.getAttribute('data-address-id');
+        function removeAddress(button) {
+    var addressId = button.getAttribute('data-address-id');
+    
+    // Log the addressId to the console for debugging
+    console.log('Address ID:', addressId);
 
-            // Confirm the action
-            if (confirm('Are you sure you want to remove this address?')) {
-                // Send the request to remove the address
-                fetch(`/api/remove_address/${addressId}/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Remove the address from the page
-                        alert('Address removed successfully');
-                        location.reload(); // Reload the page to reflect changes
-                    } else {
-                        alert('Failed to remove the address');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while removing the address.');
-                });
+    if (addressId === null || addressId === undefined) {
+        alert('Error: Address ID is null or undefined');
+        return;
+    }
+
+    // Confirm the action
+    if (confirm('Are you sure you want to remove this address?')) {
+        fetch(`/api/remove_address/${addressId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             }
-        }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the address from the page
+                alert('Address removed successfully');
+                location.reload(); // Reload the page to reflect changes
+            } else {
+                alert('Failed to remove the address');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while removing the address.');
+        });
+    }
+}
+
+
+
     </script>
 </div>
 {% endblock %}

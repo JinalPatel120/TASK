@@ -59,6 +59,7 @@ class CartService:
             return user.first_name, user.last_name
         except User.DoesNotExist:
             return None, None
+        
     def get_cart_items(self, user, request) -> List[CartItem]:
         """
         Retrieve all items in the user's cart (authenticated or anonymous).

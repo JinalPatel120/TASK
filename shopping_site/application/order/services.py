@@ -27,7 +27,7 @@ class OrderApplicationService:
 
        
     @staticmethod
-    def create_order(user,address):
+    def create_order(user,address,payment_method):
         """
         This method creates a new order and order items.
 
@@ -53,6 +53,7 @@ class OrderApplicationService:
         order = Orders.objects.create(
             user=user,
             shipping_address=address,
+            payment_method=payment_method,
             total_amount=total_price,
             status='Pending'
         )
