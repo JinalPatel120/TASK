@@ -15,7 +15,8 @@ import json
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 
 class CheckoutView(View):
     """
@@ -53,7 +54,7 @@ class CheckoutView(View):
                 logger.info(f"Redirecting user {request.user.username} to order summary page.")
                 return redirect('order_summary')
 
-            print('saved address',saved_address)
+
             # Initialize form with saved address data if present
             initial_data = {}
             if saved_address:
@@ -521,12 +522,12 @@ class DownloadInvoiceView(View):
             y = 650
             for item in order_items:
                 p.drawString(
-                    100, y, f"{item.product} - {item.quantity} x ${item.price}"
+                    100, y, f"{item.product} - {item.quantity} x ₹{item.price}"
                 )
                 y -= 25
 
             # Draw the total amount
-            p.drawString(100, y, f"Total: ${order.total_amount}")
+            p.drawString(100, y, f"Total: ₹{order.total_amount}")
 
             p.showPage()
             p.save()
@@ -549,6 +550,7 @@ class RemoveAddressView(View):
     """
 
     def delete(self, request, address_id):
+
         """
         Handles the request to remove an address by its ID.
 
@@ -560,10 +562,9 @@ class RemoveAddressView(View):
             JsonResponse: A JSON response indicating success or failure.
         """
         try:
-            print('hello from remove address')
+       
             address_service = UserApplicationService(log=logger)
             success = address_service.remove_address(address_id)
-            print('success',success)
             if success:
                 logger.info(f"Address with ID {address_id} successfully removed.")
                 return JsonResponse({'success': True}, status=200)
@@ -573,3 +574,27 @@ class RemoveAddressView(View):
         except Exception as e:
             logger.error(f"Error removing address with ID {address_id}: {str(e)}")
             return JsonResponse({'success': False, 'message': 'An error occurred while removing the address'}, status=500)
+
+
+
+@method_decorator(login_required, name='dispatch')
+class UserProfileView(View):
+    def get(self, request):
+        user_profile_service = OrderApplicationService()
+        order_history = user_profile_service.get_order_history(request.user)
+        return render(request, 'profile.html', {'order_history': order_history})
+
+    def post(self, request):
+        # Implement other POST functionalities here if needed
+        pass
+
+# For order tracking, you can create a separate view or handle it within the profile view
+@method_decorator(login_required, name='dispatch')
+class TrackOrderView(View):
+    def get(self, request, order_id):
+        user_profile_service = OrderApplicationService()
+        order = user_profile_service.track_order(request.user,order_id)
+        if order:
+            return render(request, 'track_order.html', {'order': order})
+        else:
+            return redirect('profile')  # Redirect back to profile if order not found

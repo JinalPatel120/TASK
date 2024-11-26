@@ -57,11 +57,13 @@
                     Edit Address
                 </button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 
-                
+                <!-- <form  method='post' action="/api/remove_address/{{ address.id }}/" id="removeaddressform"> -->
+                    {% csrf_token %}
                 <!-- Remove Address Button -->
                 <button type="button" class="btn btn-danger btn-sm" data-address-id="{{ address.id }}" onclick="removeAddress(this)">
                     Remove Address
                 </button>
+                <!-- </form> -->
             </div>
             {% empty %}
             <p>No addresses found. Please add one.</p>

@@ -1,0 +1,38 @@
+<!-- track_order.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Track Order{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Track Your Order</h1>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Order Details</h2>
+        </div>
+        <div class="card-body">
+            {% if order %}
+                <p><strong>Order ID:</strong> {{ order.id }}</p>
+                <p><strong>Status:</strong> {{ order.status }}</p>
+                <p><strong>Placed On:</strong> {{ order.created_at }}</p>
+                <!-- Additional order details can be added here -->
+                <div class="mt-4">
+                    <h3>Shipping Address</h3>
+                    <p>{{ order.shipping_address.street }}</p>
+                    <p>{{ order.shipping_address.city }}</p>
+                    <p>{{ order.shipping_address.zipcode }}</p>
+                    <p>{{ order.shipping_address.country }}</p>
+                </div>
+            {% else %}
+                <p>Order not found. Please check the order ID or try again later.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
+    </div>
+</div>
+{% endblock %}

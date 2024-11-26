@@ -2,6 +2,7 @@
 
 {% block content %}
 
+
 <div class="container">
     <h1 class="text-center mb-4">Products</h1>
 
@@ -26,6 +27,8 @@
             <button class="btn btn-secondary" type="submit">Apply Filters</button>
         </form>
     </div>
+
+
 
     {% if product_data %}
     <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -67,6 +70,8 @@
         </div>
         {% endfor %}
     </div>
+
+
 
    
 <!-- Pagination Controls -->
@@ -129,6 +134,9 @@
             const productId = this.dataset.productId;
             const quantityInput = document.getElementById('quantity_' + productId);
             const quantity = quantityInput ? quantityInput.value : 1;
+            
+            this.disabled = true;
+            this.textContent = "Adding...";
 
             fetch(`/add_to_cart/${productId}/`, {
                 method: 'POST',
@@ -154,13 +162,17 @@
                     messageContainer.classList.add('alert-danger');
                 }
 
-                // Optionally, hide the message after a few seconds
+                
                 setTimeout(() => {
                     messageContainer.classList.add('d-none');
-                }, 5000); // Hide after 5 seconds
+                }, 5000);
+
+                this.disabled = false;
+                this.textContent = "Add to Cart";
             })
             .catch(error => console.error('Error:', error));
         });
     });
+    updateCartCount();
 </script>
 {% endblock %}

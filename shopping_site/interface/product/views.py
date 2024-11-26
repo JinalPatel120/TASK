@@ -14,7 +14,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.mixins import UserPassesTestMixin,LoginRequiredMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.core.files.storage import FileSystemStorage
-import os
+from django.db import DataError
 
 def float_parser(value: Optional[float]) -> Optional[float]:
     if value:
@@ -120,7 +120,6 @@ class ProductCreateView(FormView,UserPassesTestMixin):
             return super().form_valid(form)
         except IntegrityError as e:
             self.product_service.log.error(f"IntegrityError: {str(e)}")
-            # Handle specific database integrity issues, like duplicate entries
             messages.error(self.request, "Error creating product. Please try again.")
             return self.form_invalid(form)
         except Exception as e:
@@ -129,13 +128,10 @@ class ProductCreateView(FormView,UserPassesTestMixin):
             return self.form_invalid(form)
 
     def form_invalid(self, form):
-        # Handle invalid form (e.g., form errors) and re-render the page with errors
         messages.error(
             self.request, "There were errors with the form. Please check and try again."
         )
         return super().form_invalid(form)
-
-
 
 
 class ProductManageView(View):
@@ -145,9 +141,41 @@ class ProductManageView(View):
 
     product_service=ProductApplicationService(log=logger)
     def get(self, request):
-        
-        products = self.product_service.get_all_products()
-        return render(request, 'product_manage.html', {'products': products})
+        search_query = request.GET.get("search_query", "")
+        min_price = float_parser(request.GET.get("min_price", None))
+        max_price = float_parser(request.GET.get("max_price", None))
+
+        try:
+            product_data = self.product_service.filter_products(
+                search_query=search_query,
+                min_price=min_price,
+                max_price=max_price,
+            )
+
+            paginator = Paginator(product_data, 9)
+            page = request.GET.get("page", 1)
+
+            try:
+                products = paginator.page(page)
+            except PageNotAnInteger:
+                products = paginator.page(1)
+            except EmptyPage:
+                products = paginator.page(paginator.num_pages)
+
+            return render(
+                request,
+                'product_manage.html',
+                {
+                    'products': products,
+                    'search_query': search_query,
+                    'min_price': min_price,
+                    'max_price': max_price,
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error occurred while fetching products: {str(e)}")
+            messages.error(request, "An error occurred while fetching products.")
+       
 
     def post(self, request):
         # Handle actions like remove, edit, or manage stock
@@ -162,9 +190,9 @@ class ProductManageView(View):
             return redirect('product_update', product_id=product_id)
 
         elif action == 'manage_stock':
-            return redirect('product_manage', product_id=product_id)
-        
+            return redirect('product_manage', product_id=product_id)  
         return redirect('product_manage')
+
 
 class ProductUpdateView(View):
     product_service=ProductApplicationService(log=logger)
@@ -211,7 +239,9 @@ class ProductUpdateView(View):
          
             messages.success(self.request, "Product updated successfully.")
             return redirect('product_manage')
-
+        except DataError:
+            messages.error(request, "The price value is too large. Please enter a valid price.")
+            return redirect('product_update', product_id=product_id)
         except ValueError:
             return JsonResponse({"error": "Product not found"}, status=404)
 

@@ -5,6 +5,17 @@
 {% block title %}Manage Products{% endblock %}
 
 {% block content %}
+{% if messages %}
+            {% for message in messages %}
+                {% if message.level == 40 %} <!-- Error message -->
+                    <li class="alert alert-danger">{{ message }}</li>
+                {% elif message.level == 25 %} <!-- Success message -->
+                    <li class="alert alert-success">{{ message }}</li>
+                {% else %}
+                    <li class="alert alert-info">{{ message }}</li> 
+                {% endif %}
+            {% endfor %}
+        {% endif %}
     <h1>Update Product</h1>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}

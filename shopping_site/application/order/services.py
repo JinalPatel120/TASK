@@ -12,8 +12,6 @@ class OrderApplicationService:
     Service class responsible for handling order-related operations, such as creating, updating, and retrieving orders.
     """
 
-    
-
     @staticmethod
     def get_all_orders() -> List[Orders]:
         """
@@ -146,4 +144,13 @@ class OrderApplicationService:
     
     def invoice_items(self,order:str):
         return  OrderItem.objects.filter(order=order)
+    
+    def get_order_history(self,user):
+        return Orders.objects.filter(user=user).order_by('-created_at')
+
+    def track_order(self,user, order_id):
+        try:
+            return Orders.objects.get(id=order_id, user=user)
+        except Orders.DoesNotExist:
+            return None
     
