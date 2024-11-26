@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Product</title>
-</head>
-<body>
+
+
+{% extends 'base.html' %}
+
+{% block title %}Manage Products{% endblock %}
+
+{% block content %}
     <h1>Update Product</h1>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
@@ -22,10 +21,18 @@
         <input type="number" id="quantity" name="quantity" value="{{ product_data.quantity }}" required><br><br>
         
         <label for="image">Image:</label><br>
-        <input type="file" id="image" name="image"><br><br>
+        <label for="image">Image:</label><br>
+        {% if product_data.image %}
+            <img src="{{ product_data.image.url }}" alt="Product Image" width="100"><br><br>
+            <input type="hidden" name="existing_image" value="{{ product_data.image }}"> <!-- Store existing image path in a hidden field -->
+        {% endif %}
+        
+        <input type="file" id="image" name="image"><br><br> 
         
         <button type="submit">Update Product</button>
     </form>
-    <a href="/">Back to Product List</a>
+    <a href="{% url 'product_manage' %}">Back to Product List</a>
 </body>
 </html>
+
+{% endblock %}

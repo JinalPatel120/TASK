@@ -28,22 +28,31 @@
                         <a class="nav-link" href="{% url 'product_list' %}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'product_create' %}">Add Product</a>
+                        {% if user.is_authenticated and user.is_superuser %}
+                        <a class="nav-link" href="{% url 'product_manage' %}">Manage Stock</a>
+                        {% endif %}
                     </li>
                     {% if user.is_authenticated %}
+                    
+                  
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'logout' %}">Logout</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-user-circle"></i> 
+                        </a>  </li>
                     {% else %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'login' %}">Login</a>
                     </li>
+                    
                     {% endif %}
 
                    <!-- Cart Icon and Count -->
                    <li class="nav-item">
                     <a class="nav-link" href="{% url 'cart_page' %}">
-                        <i class="cart-icon">🛒</i>
+                  
                         <i class="fas fa-shopping-bag"></i>
                         <span id="cart-count">{{ cart_count }}</span>
                     </a>

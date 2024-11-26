@@ -11,48 +11,10 @@ from django.http import JsonResponse
 from django.views import View
 from shopping_site.infrastructure.logger.models import logger
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-
-
-class ProductCreateView(FormView):
-    """
-    Create a new product using Django's FormView.
-    """
-
-    form_class = ProductForm
-    template_name = "product_create.html"
-    success_url = reverse_lazy("product_list")
-    product_service = ProductApplicationService(log=logger)
-
-    def form_valid(self, form):
-        try:
-            # Create product using the application service
-            product_data = form.cleaned_data
-            product = self.product_service.create_product(product_data)
-            if isinstance(
-                product, str
-            ):  # If the returned value is a string (error message)
-                # Add the error message to the form
-                form.add_error("title", product)
-                return self.form_invalid(form)
-            messages.success(self.request, "Product added successfully!")
-            return super().form_valid(form)
-        except IntegrityError as e:
-            self.product_service.log.error(f"IntegrityError: {str(e)}")
-            # Handle specific database integrity issues, like duplicate entries
-            messages.error(self.request, "Error creating product. Please try again.")
-            return self.form_invalid(form)
-        except Exception as e:
-            # Handle any other unexpected errors
-            messages.error(self.request, f"An unexpected error occurred: {str(e)}")
-            return self.form_invalid(form)
-
-    def form_invalid(self, form):
-        # Handle invalid form (e.g., form errors) and re-render the page with errors
-        messages.error(
-            self.request, "There were errors with the form. Please check and try again."
-        )
-        return super().form_invalid(form)
-
+from django.contrib.auth.mixins import UserPassesTestMixin,LoginRequiredMixin
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.core.files.storage import FileSystemStorage
+import os
 
 def float_parser(value: Optional[float]) -> Optional[float]:
     if value:
@@ -60,6 +22,7 @@ def float_parser(value: Optional[float]) -> Optional[float]:
             return float(value)
         except ValueError:
             return None  # If invalid, reset to None
+
 
 
 class ProductListView(FormView):
@@ -115,7 +78,6 @@ class ProductListView(FormView):
             )
 
         except Exception as e:
-
             logger.error(f"Error occurred while fetching products: {str(e)}")
             return render(
                 request,
@@ -124,13 +86,94 @@ class ProductListView(FormView):
             )
 
 
+class SuperuserRequiredMixin(UserPassesTestMixin):
+    """Mixin to ensure only superusers can access the view."""
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def handle_no_permission(self):
+        return redirect('product_list')  # Redirect to product list if not superuser
+
+
+class ProductCreateView(FormView,UserPassesTestMixin):
+    """
+    Create a new product using Django's FormView.
+    """
+
+    form_class = ProductForm
+    template_name = "product_create.html"
+    success_url = reverse_lazy("product_manage")
+    product_service = ProductApplicationService(log=logger)
+
+    def form_valid(self, form):
+        try:
+            # Create product using the application service
+            product_data = form.cleaned_data
+            product = self.product_service.create_product(product_data)
+            if isinstance(
+                product, str
+            ):  # If the returned value is a string (error message)
+                # Add the error message to the form
+                form.add_error("title", product)
+                return self.form_invalid(form)
+            messages.success(self.request, "Product added successfully!")
+            return super().form_valid(form)
+        except IntegrityError as e:
+            self.product_service.log.error(f"IntegrityError: {str(e)}")
+            # Handle specific database integrity issues, like duplicate entries
+            messages.error(self.request, "Error creating product. Please try again.")
+            return self.form_invalid(form)
+        except Exception as e:
+            # Handle any other unexpected errors
+            messages.error(self.request, f"An unexpected error occurred: {str(e)}")
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        # Handle invalid form (e.g., form errors) and re-render the page with errors
+        messages.error(
+            self.request, "There were errors with the form. Please check and try again."
+        )
+        return super().form_invalid(form)
+
+
+
+
+class ProductManageView(View):
+    """
+    View to display a list of products with options to remove, edit, or manage stock.
+    """
+
+    product_service=ProductApplicationService(log=logger)
+    def get(self, request):
+        
+        products = self.product_service.get_all_products()
+        return render(request, 'product_manage.html', {'products': products})
+
+    def post(self, request):
+        # Handle actions like remove, edit, or manage stock
+        action = request.POST.get('action')
+        product_id = request.POST.get('product_id')
+
+        if action == 'remove':
+            ProductApplicationService.delete_product(product_id)
+            return redirect('product_manage')
+
+        elif action == 'edit':
+            return redirect('product_update', product_id=product_id)
+
+        elif action == 'manage_stock':
+            return redirect('product_manage', product_id=product_id)
+        
+        return redirect('product_manage')
+
 class ProductUpdateView(View):
+    product_service=ProductApplicationService(log=logger)
     """
     Update an existing product.
     """
 
     def get(self, request, product_id):
-        product = ProductApplicationService.get_product_by_id(product_id)
+        product = self.product_service.get_product_by_id(product_id)
         product_data = {
             "title": product.title,
             "description": product.description,
@@ -140,6 +183,7 @@ class ProductUpdateView(View):
         }
         return render(request, "product_update.html", {"product_data": product_data})
 
+
     def post(self, request, product_id):
         data = request.POST
         product_data = {
@@ -147,23 +191,57 @@ class ProductUpdateView(View):
             "description": data.get("description"),
             "price": data.get("price"),
             "quantity": data.get("quantity"),
-            "image": data.get("image"),
         }
+
+        # Access the image file using request.FILES
+        image = request.FILES.get("image")
+        if image:
+            # If the image is uploaded, handle saving the file
+            fs = FileSystemStorage(location='media/products')  # Adjust the path as needed
+            filename = fs.save(image.name, image)
+            product_data["image"] = fs.url(filename)  # Store the URL or path of the image
+        else:
+            # If no new image is uploaded, keep the existing image path (handle this part)
+            existing_image = request.POST.get("existing_image")  # Assuming you have a hidden field for the existing image
+            if existing_image:
+                product_data["image"] = existing_image  # Retain the existing image path
+
         try:
-            product = ProductApplicationService.update_product(product_id, product_data)
-            return JsonResponse({"product_id": product.id}, status=200)
+            self.product_service.update_product(product_id, product_data)
+         
+            messages.success(self.request, "Product updated successfully.")
+            return redirect('product_manage')
+
         except ValueError:
             return JsonResponse({"error": "Product not found"}, status=404)
 
 
+
+class ProductDeleteView(View):
+    product_service=ProductApplicationService(log=logger)
+    """
+    View for deleting a product.
+    """
+    def post(self, request, product_id):
+
+        success = self.product_service.delete_product(product_id)
+        if success:
+            messages.success(self.request, "Product deleted successfully!")
+            return redirect('product_manage')
+        else:
+            messages.error(self.request, "Error deleting product. Please try again.")
+            return render(request, "product_manage.html", status=404)
+
+
 class ProductSearchView(View):
+    product_service=ProductApplicationService(log=logger)
     """
     Search for products by title.
     """
 
     def get(self, request):
         query = request.GET.get("query", "")
-        products = ProductApplicationService.search_products(query)
+        products = self.product_service.search_products(query)
         product_data = [
             {"id": product.id, "title": product.title, "price": product.price}
             for product in products
@@ -172,24 +250,13 @@ class ProductSearchView(View):
 
 
 class ProductDetailView(View):
+    product_service=ProductApplicationService(log=logger)
     """
     View for displaying a single product's details.
     """
 
     def get(self, request, product_id):
-        product = ProductApplicationService.get_product_by_id(product_id)
+        product = self.product_service.get_product_by_id(product_id)
         if product is None:
-            return render(request, "404.html", status=404)
+            return render(request, "product_list.html", status=404)
         return render(request, "product_detail.html", {"product": product})
-
-
-class ProductDeleteView(View):
-    """
-    View for deleting a product.
-    """
-
-    def post(self, request, product_id):
-        success = ProductApplicationService.delete_product(product_id)
-        if success:
-            return redirect("product_list")
-        return render(request, "404.html", status=404)

@@ -63,9 +63,7 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
-    last_login = None
-    is_staff = None
-    date_joined = None
+    objects = CustomUserManager()
 
     class Meta:
         db_table = "user"

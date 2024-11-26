@@ -391,7 +391,7 @@ class UserApplicationService:
                 "flat_building", "area","landmark","city","pincode"
             )
 
-            print('address fileds',address_fields)
+
             if address_fields:
                 logger.info(
                     f"Address found for user {user.username}: {address_fields[0]}"
