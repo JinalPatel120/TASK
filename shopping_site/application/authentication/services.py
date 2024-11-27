@@ -381,50 +381,34 @@ class UserApplicationService:
             )
             raise
 
-    def get_user_address(self, user):
+
+    def get_user_addresses(self, user, single=False):
         """
-        Retrieve specific fields of the shipping address for a given user.
+        Retrieve shipping addresses for a given user. 
+        If `single` is True, retrieve only the first address.
+        If `single` is False, retrieve all addresses.
         """
         try:
-            # Retrieve specific fields from the UserAddress model
+            # Define the fields to retrieve from UserAddress model
             address_fields = UserAddress.objects.filter(user=user).values(
-                "flat_building", "area","landmark","city","pincode"
-            )
-
-
-            if address_fields:
-                logger.info(
-                    f"Address found for user {user.username}: {address_fields[0]}"
-                )
-              
-                return address_fields[
-                    0
-                ]  
-            else:
-                logger.error(f"No address found for user {user.username}.")
-                return None
-        except Exception as e:
-            logger.error(f"Error retrieving user address for {user.username}: {str(e)}")
-            raise ValueError(f"Could not retrieve address for user {user.username}.")
-        
-    def get_user_addresses(self, user):
-        """
-        Retrieve all shipping addresses for a given user.
-        """
-        try:
-            # Retrieve all addresses for the user
-            address_fields = UserAddress.objects.filter(user=user).values(
-                "id", "flat_building", "area","landmark","city","state", "pincode"
+                "id", "flat_building", "area", "landmark", "city", "state", "pincode"
             )
 
             if address_fields:
-                logger.info(f"Found {len(address_fields)} addresses for user {user.username}.")
-                return address_fields  # Return all addresses
+                if single:
+                    # If only one address is required, return the first one
+                    logger.info(f"Address found for user {user.username}: {address_fields[0]}")
+                    return address_fields[0]  # Return only the first address
+                else:
+                    # If all addresses are required, return the full list
+                    logger.info(f"Found {len(address_fields)} addresses for user {user.username}.")
+                    return address_fields  # Return all addresses
             else:
                 logger.error(f"No addresses found for user {user.username}.")
-                return []  # Return an empty list if no addresses are found
+                return None if single else []  # Return None for single, empty list for multiple
+
         except Exception as e:
-            logger.error(f"Error retrieving user addresses for {user.username}: {str(e)}")
+            logger.error(f"Error retrieving addresses for user {user.username}: {str(e)}")
             raise ValueError(f"Could not retrieve addresses for user {user.username}.")
 
 

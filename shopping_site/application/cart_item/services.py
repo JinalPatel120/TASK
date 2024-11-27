@@ -7,7 +7,7 @@ from shopping_site.infrastructure.logger.models import AttributeLogger
 from django.contrib.sessions.models import Session
 from django.utils.timezone import now
 import uuid
-from django.db.models import F, ExpressionWrapper, DecimalField
+from django.db.models import F, ExpressionWrapper, DecimalField,Sum
 
 class CartService:
     """
@@ -81,6 +81,9 @@ class CartService:
             return cart_items
         return []
 
+ 
+
+    
     
     
     def update_cart_item_quantity(self,item_id:int, quantity:int) -> CartItem:
@@ -137,3 +140,6 @@ class CartService:
             # Log the error if something goes wrong
    
             return 0
+    def get_product_quantity_in_cart(self, cart, product):
+        cart_item = cart.items.filter(product=product).first()
+        return cart_item.quantity if cart_item else 0

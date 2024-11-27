@@ -25,6 +25,8 @@ def float_parser(value: Optional[float]) -> Optional[float]:
 
 
 
+
+
 class ProductListView(FormView):
     """
     List all products with an optional form for filtering.
@@ -88,14 +90,18 @@ class ProductListView(FormView):
 
 class SuperuserRequiredMixin(UserPassesTestMixin):
     """Mixin to ensure only superusers can access the view."""
+    
     def test_func(self):
-        return self.request.user.is_superuser
+
+        return self.request.user.is_authenticated and self.request.user.is_superuser
 
     def handle_no_permission(self):
-        return redirect('product_list')  # Redirect to product list if not superuser
 
+            messages.error(self.request, "You must be an admin to access this page.")
+            return redirect('login')  # Redirect to login page or another page if needed
+        
 
-class ProductCreateView(FormView,UserPassesTestMixin):
+class ProductCreateView(SuperuserRequiredMixin,FormView):
     """
     Create a new product using Django's FormView.
     """
@@ -134,7 +140,7 @@ class ProductCreateView(FormView,UserPassesTestMixin):
         return super().form_invalid(form)
 
 
-class ProductManageView(View):
+class ProductManageView(SuperuserRequiredMixin,View):
     """
     View to display a list of products with options to remove, edit, or manage stock.
     """
@@ -194,7 +200,7 @@ class ProductManageView(View):
         return redirect('product_manage')
 
 
-class ProductUpdateView(View):
+class ProductUpdateView(SuperuserRequiredMixin,View):
     product_service=ProductApplicationService(log=logger)
     """
     Update an existing product.
@@ -247,7 +253,7 @@ class ProductUpdateView(View):
 
 
 
-class ProductDeleteView(View):
+class ProductDeleteView(SuperuserRequiredMixin,View):
     product_service=ProductApplicationService(log=logger)
     """
     View for deleting a product.

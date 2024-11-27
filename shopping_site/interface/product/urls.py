@@ -3,7 +3,7 @@
 from django.urls import path
 from .views import ProductListView, ProductDetailView, ProductSearchView, ProductCreateView, ProductUpdateView, ProductDeleteView,ProductManageView
 from shopping_site.interface.cart_item.views import AddToCartView,CartView,UpdateCartItemView,RemoveCartItemView,UpdateCartCountView
-from shopping_site.interface.orders.views import RemoveAddressView,CheckoutView,OrderSummaryView,PlaceOrderView,EditAddressView,OrderConfirmationView,SetDefaultAddressView,UpdateAddressView,DownloadInvoiceView,UserProfileView,TrackOrderView
+from shopping_site.interface.orders.views import CancelOrderView, RemoveAddressView,CheckoutView,OrderSummaryView,PlaceOrderView,EditAddressView,OrderConfirmationView,SetDefaultAddressView,UpdateAddressView,DownloadInvoiceView,UserProfileView,TrackOrderView
 
 urlpatterns = [
     path('', ProductListView.as_view(), name='product_list'),
@@ -29,5 +29,6 @@ urlpatterns = [
     path('api/remove_address/<int:address_id>/', RemoveAddressView.as_view(), name='remove_address'),
     path('profile/', UserProfileView.as_view(), name='profile'),
     path('track_order/<int:order_id>/', TrackOrderView.as_view(), name='track_order'),
+    path('cancel_order/<int:order_id>/',CancelOrderView.as_view(), name='cancel_order'),
 
 ]

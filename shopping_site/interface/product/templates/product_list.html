@@ -28,6 +28,24 @@
         </form>
     </div>
 
+    <!-- Modal for displaying error or success messages -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="messageModalLabel">Notification</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="modalMessage">
+          <!-- Dynamic message will be injected here -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
 
 
     {% if product_data %}
@@ -115,6 +133,8 @@
     <p class="text-center text-muted">No products found.</p>
     {% endif %}
 </div>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
 
 <script>
     // Function to update cart count in the navigation bar
@@ -133,7 +153,19 @@
         button.addEventListener('click', function() {
             const productId = this.dataset.productId;
             const quantityInput = document.getElementById('quantity_' + productId);
-            const quantity = quantityInput ? quantityInput.value : 1;
+            const quantity = parseInt(quantityInput.value);
+            const maxQuantity = parseInt(quantityInput.max); 
+
+            if (quantity > maxQuantity) {
+            // Show error if quantity exceeds available stock
+            const errorMessage = document.getElementById('error-message_' + productId);
+            errorMessage.textContent = `Sorry, only ${maxQuantity} of this product are available.`;
+            errorMessage.classList.remove('d-none');
+            setTimeout(() => {
+                errorMessage.classList.add('d-none');
+                }, 5000);
+            return;  // Prevent further action
+        }
             
             this.disabled = true;
             this.textContent = "Adding...";
@@ -156,16 +188,18 @@
                     messageContainer.textContent = data.message;  // Set the message
                     messageContainer.classList.remove('d-none');  // Show the message container
                     messageContainer.classList.add('alert-success');  // You can change this based on the message type
+                    showModalMessage(data.message);
                 } else {
                     messageContainer.textContent = 'Error adding product to cart.';
                     messageContainer.classList.remove('d-none');
                     messageContainer.classList.add('alert-danger');
+                    showModalMessage(data.message);
                 }
 
                 
                 setTimeout(() => {
                     messageContainer.classList.add('d-none');
-                }, 5000);
+                }, 15000);
 
                 this.disabled = false;
                 this.textContent = "Add to Cart";
@@ -173,6 +207,14 @@
             .catch(error => console.error('Error:', error));
         });
     });
-    updateCartCount();
+    // Function to show the modal with a dynamic message
+function showModalMessage(message) {
+    // Set the message in the modal body
+    document.getElementById('modalMessage').textContent = message;
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+    modal.show();
+}
+
 </script>
 {% endblock %}

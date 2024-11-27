@@ -5,6 +5,7 @@ from shopping_site.application.product.services import ProductApplicationService
 from django.contrib import messages
 from shopping_site.infrastructure.logger.models import logger
 from django.http import JsonResponse
+import json
 
 class AddToCartView(View):
     cart_service = CartService(log=logger)
@@ -19,7 +20,8 @@ class AddToCartView(View):
                 request.session.create()  # Ensure session key is created
 
             product = ProductApplicationService.get_product_by_id(product_id)
-            quantity = int(request.POST.get("quantity", 1))
+            data = json.loads(request.body)
+            quantity = data.get('quantity')
 
             # Validate if the quantity is less than or equal to 0
             if quantity <= 0:
@@ -34,13 +36,24 @@ class AddToCartView(View):
             else:
                 cart = self.cart_service.get_or_create_cart_for_anonymous_user(request.session.session_key)
             
+            current_quantity = self.cart_service.get_product_quantity_in_cart(cart, product)
+            new_total_quantity = current_quantity + quantity
+
+            cart_count = self.cart_service.get_cart_item_count(cart)
+          
+            # Add this condition inside the `post` method where you check for stock
+            if new_total_quantity > product.quantity:
+                cart_count = self.cart_service.get_cart_item_count(cart)
+                message = f"Sorry, only {product.quantity} of this product are available."
+                return JsonResponse({'cart_count': cart_count, 'message': message, 'error': True})
+
 
 
             # Add the product to the cart
             self.cart_service.add_product_to_cart(cart, product, quantity)
           
             # Return updated cart count
-            cart_count = self.cart_service.get_cart_item_count(cart)
+            
             message= f"Product {product.title} has been {'added to' if quantity == 1 else 'updated in'} your cart!"
             return JsonResponse({ 'cart_count': cart_count,'message': message})
 
@@ -69,6 +82,7 @@ class UpdateCartCountView(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
+
 class CartView(View):
     cart_service = CartService(log=logger)
 
@@ -94,28 +108,50 @@ class CartView(View):
 
 
 class UpdateCartItemView(View):
-    """
-    View to handle updating the quantity of a cart item.
-    """
-
-    cart_service=CartService(log=logger)
+    cart_service = CartService(log=logger)
+    
     def post(self, request, item_id):
-        """
-        Handles the POST request for updating the quantity of a cart item.
-        """
         try:
             quantity = int(request.POST.get('quantity', 1))
 
-        # Update the cart item quantity using the CartItemService
-            item,message=self.cart_service.update_cart_item_quantity(item_id, quantity)
+            # Update the cart item quantity using the CartService
+            item, message = self.cart_service.update_cart_item_quantity(item_id, quantity)
 
-            messages.info(request, message)
+            # Serialize the item to avoid non-serializable methods
+            def serialize_item(item):
+                return {
+                    'id': item.id,
+                    'product_title': item.product.title,
+                    'quantity': item.quantity,
+                    'total_price': item.total_price() # Ensure total_price is a value, not a method
+                }
+            
+
+
+            # Ensure message is a string if it's an object
+            message = str(message)
+
+            # Serialize item and respond with updated cart information in JSON format
+            serialized_item = serialize_item(item)
+
+            print('serrialized',serialized_item)
+            print('item price',serialized_item['total_price']  )
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'total_price': serialized_item['total_price']  
+            })
 
         except Exception as e:
-            # Handle the case where the cart item is not found
-            return redirect('cart_page')  # Redirect to the cart page if the item is not found
+            # Handle the error case and send an error response
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
 
-        return redirect('cart_page')  # Redirect back to the cart page
+
+
+
 
 class RemoveCartItemView(View):
     cart_service=CartService(log=logger)
