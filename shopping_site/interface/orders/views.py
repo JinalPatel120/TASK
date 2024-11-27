@@ -616,16 +616,27 @@ class RemoveAddressView(View):
 class UserProfileView(View):
     @method_decorator(login_required)
     def get(self, request):
+        """
+        Renders the user profile page with order history.
+
+        This view fetches the order history of the currently logged-in user 
+        and renders it on the "profile.html" page.
+        """
         user_profile_service = OrderApplicationService()
         order_history = user_profile_service.get_order_history(request.user)
         print(order_history,'order history')
         return render(request, "profile.html", {"order_history": order_history})
 
 
-
 class TrackOrderView(View):
     @method_decorator(login_required)
     def get(self, request, order_id):
+        """
+        Renders the order tracking page for a specific order.
+
+        This view fetches the status of a particular order and renders it 
+        on the "track_order.html" page.
+        """
         user_profile_service = OrderApplicationService()
         order = user_profile_service.track_order(request.user, order_id)
         if order:
@@ -638,6 +649,12 @@ class TrackOrderView(View):
 class CancelOrderView(View):
     @method_decorator(login_required)
     def post(self, request, order_id):
+        """
+        Cancels an order for the logged-in user.
+
+        This view attempts to cancel an order by its ID for the currently logged-in 
+        user and returns a JSON response indicating success or failure.
+        """
         user_profile_service = OrderApplicationService()
         order = user_profile_service.cancel_order(request.user, order_id)
 

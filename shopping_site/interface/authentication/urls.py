@@ -10,7 +10,6 @@ from .views import (
     OTPVerificationView,
     ForgotPasswordView,
     ResetPasswordView,
-    ProductPageView,
     LogoutView
 )
 from shopping_site.interface.product.views import ProductListView
@@ -21,7 +20,6 @@ urlpatterns = [
     path("forgot/", ForgotPasswordView.as_view(), name="forgot_password"),
     path("reset_password/", ResetPasswordView.as_view(), name="reset_password"),
     path("verify_otp/", OTPVerificationView.as_view(), name="verify_otp"),
-    path("product_page/", ProductPageView.as_view(), name="product_page"),
    path('logout/', LogoutView.as_view(), name='logout'), 
    path('', ProductListView.as_view(), name='product_list'),
 ]

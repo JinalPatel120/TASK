@@ -140,15 +140,6 @@ class LogoutView(TemplateView):
         messages.success(request, "You have been logged out successfully.")
         return redirect("product_list")
 
-class ProductPageView(TemplateView):
-    template_name = "product_page.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            messages.error(request, "You must be logged in to view this page.")
-            return redirect("login")
-        return super().dispatch(request, *args, **kwargs)
-
 
 class ForgotPasswordView(FormView):
     """

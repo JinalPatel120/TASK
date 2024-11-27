@@ -96,7 +96,6 @@ class CartView(View):
 
             # Calculate the total cost of the cart directly from the query
             total = sum(item.total_price for item in cart_items)
-        
             return render(request, 'view_cart.html', {
                 'cart_items': cart_items,
                 'total': total,
@@ -126,16 +125,9 @@ class UpdateCartItemView(View):
                     'total_price': item.total_price() # Ensure total_price is a value, not a method
                 }
             
-
-
             # Ensure message is a string if it's an object
             message = str(message)
-
-            # Serialize item and respond with updated cart information in JSON format
             serialized_item = serialize_item(item)
-
-            print('serrialized',serialized_item)
-            print('item price',serialized_item['total_price']  )
             return JsonResponse({
                 'success': True,
                 'message': message,

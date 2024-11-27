@@ -19,6 +19,7 @@ from django.http import HttpRequest
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.core.exceptions import ObjectDoesNotExist
+from typing import List
 
 
 class UserApplicationService:
@@ -302,7 +303,7 @@ class UserApplicationService:
                 f"Unexpected error during password reset for user {email}: {str(e)}"
             )
 
-    def invalidate_token(self, email: str):
+    def invalidate_token(self, email: str) -> None:
         """
         Invalidate the token by setting it to null in the database.
         """
@@ -323,7 +324,7 @@ class UserApplicationService:
             return True  # Token is invalid
         return False
 
-    def handle_otp_attempts(self, request: HttpRequest):
+    def handle_otp_attempts(self, request: HttpRequest) -> Optional[Dict[str, any]]:
         """
         Handles the number of OTP attempts, blocking attempts if necessary and calculating the next retry time.
         """
@@ -351,7 +352,7 @@ class UserApplicationService:
 
         return None
 
-    def increment_otp_attempts(self, request: HttpRequest):
+    def increment_otp_attempts(self, request: HttpRequest) -> int:
         """
         Increment the OTP attempts in the session.
         """
@@ -370,7 +371,15 @@ class UserApplicationService:
         request.session["next_attempt_time"] = next_attempt_time.isoformat()
         return next_attempt_seconds
 
-    def get_or_create_address(self, user, address_data):
+    def get_or_create_address(self, user, address_data) -> UserAddress:
+        """
+        Create a new address for the user. If an address already exists, return it.
+
+        Args:
+            user (User): The user object to associate the address with.
+            address_data (dict): A dictionary containing the address fields to create or update the address.
+        """
+
         try:
             address = UserAddress.objects.create(user=user, **address_data)
             self.log.info(f"New address created for user {user.username}")
@@ -379,12 +388,15 @@ class UserApplicationService:
             self.log.error(
                 f"Error retrieving or creating address for user {user.username}: {str(e)}"
             )
-            raise
+            raise Exception(
+                f"Error retrieving or creating address for user {user.username}: {str(e)}"
+            )
 
-
-    def get_user_addresses(self, user, single=False):
+    def get_user_addresses(
+        self, user, single: bool = False
+    ) -> Optional[List[Dict[str, any]]]:
         """
-        Retrieve shipping addresses for a given user. 
+        Retrieve shipping addresses for a given user.
         If `single` is True, retrieve only the first address.
         If `single` is False, retrieve all addresses.
         """
@@ -397,24 +409,36 @@ class UserApplicationService:
             if address_fields:
                 if single:
                     # If only one address is required, return the first one
-                    logger.info(f"Address found for user {user.username}: {address_fields[0]}")
+                    logger.info(
+                        f"Address found for user {user.username}: {address_fields[0]}"
+                    )
                     return address_fields[0]  # Return only the first address
                 else:
                     # If all addresses are required, return the full list
-                    logger.info(f"Found {len(address_fields)} addresses for user {user.username}.")
+                    logger.info(
+                        f"Found {len(address_fields)} addresses for user {user.username}."
+                    )
                     return address_fields  # Return all addresses
             else:
                 logger.error(f"No addresses found for user {user.username}.")
-                return None if single else []  # Return None for single, empty list for multiple
+                return (
+                    None if single else []
+                )  # Return None for single, empty list for multiple
 
         except Exception as e:
-            logger.error(f"Error retrieving addresses for user {user.username}: {str(e)}")
+            logger.error(
+                f"Error retrieving addresses for user {user.username}: {str(e)}"
+            )
             raise ValueError(f"Could not retrieve addresses for user {user.username}.")
 
+    def get_default_address(self, user: User) -> Optional[UserAddress]:
+        """
+        Retrieve the user's default shipping address.
 
-    def get_default_address(self, user):
-        # Logic to retrieve the user's default address
-        # You might want to check a flag or field in the database that indicates the default address.
+        Args:
+            user (User): The user object whose default address is being fetched.
+        """
+
         try:
             # Assuming you have an Address model with a `is_default` flag
             default_address = UserAddress.objects.filter(
@@ -429,7 +453,15 @@ class UserApplicationService:
             self.log.error(f"Error fetching default address: {str(e)}")
             return None
 
-    def set_default_address(self, user, user_address):
+    def set_default_address(self, user: User, user_address: UserAddress) -> bool:
+        """
+        Set the provided address as the default for the user.
+
+        Args:
+            user (User): The user object whose default address is being updated.
+            user_address (UserAddress): The address to be set as default.
+        """
+
         try:
             # Check if the provided address is already the default
             if user_address.is_default:
@@ -455,7 +487,15 @@ class UserApplicationService:
             )
             return False
 
-    def update_address(self, user, address_data):
+    def update_address(self, user: User, address_data: Dict[str, any]) -> UserAddress:
+        """
+        Update an existing address for the user with new data.
+
+        Args:
+            user (User): The user object whose address is being updated.
+            address_data (dict): A dictionary containing the updated address fields.
+
+        """
         try:
             # Check if the user already has an address
             address = UserAddress.objects.get(user=user)
@@ -471,14 +511,21 @@ class UserApplicationService:
             self.log.error(f"Error updating address for user {user.username}: {str(e)}")
             raise
 
-    def get_address_by_id(self, user, address_id):
+    def get_address_by_id(self, user: User, address_id: int) -> Optional[UserAddress]:
+        """
+        Retrieve a shipping address for the given user by address ID.
+
+        Args:
+            user (User): The user object whose address is being fetched.
+            address_id (int): The ID of the address to retrieve.
+        """
+
         try:
-            # Assuming Address is a model that stores shipping addresses
             return UserAddress.objects.filter(user=user, id=address_id).first()
         except Exception as e:
             self.log.error(f"Error fetching address: {str(e)}")
             return None
-        
+
     def remove_address(self, address_id: int) -> bool:
         """
         Removes an address by its ID.
