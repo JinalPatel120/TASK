@@ -23,6 +23,7 @@
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <div class="container-fluid">
+            <input type="hidden" value="{{ request.session.session_key }}" id="hidden-input">
             <a class="navbar-brand" href="{% url 'product_list' %}">Shop</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                 aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -77,14 +78,30 @@
         {% block content %}{% endblock %}
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js">
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.js"></script>
     <script>
+         function closeIt()
+{
+    console.log("----------------------------------")
+    console.log();
+    
+    let session= document.querySelector("#hidden-input");
+    
+    const manage_session = fetch(`/manage_session/${session.getAttribute("value")}`)
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        
+    });
+    console.log(`/manage_session/${session.getAttribute("value")}`,"heloooooooooooooooooooooooo",manage_session)
+   
+}
+window.onbeforeunload = closeIt;
     console.log('hello from base templates')
-    function closeIt()
-<script src="https://cdn.jsdelivr.net/npm/fingerprintjs2"></script>
-
+</script>
 </body>
 </html>

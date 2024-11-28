@@ -110,7 +110,10 @@ if DEBUG:
         '127.0.0.1',
     ]
 
-
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_NAME = '39333da9-10f0-442b-aa25-8aa0238856e7'
 ROOT_URLCONF = "shopping_site.urls"
 
 SITE_URL = 'http://localhost:8000'  # Replace with your actual domain

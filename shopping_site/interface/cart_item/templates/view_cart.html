@@ -57,7 +57,7 @@
         <a href="{% url 'product_list' %}" class="btn btn-primary">Continue Shopping</a>
         <a href="{% url 'checkout' %}" class="btn btn-success">Proceed to Checkout</a>
         <div class="total-amount">
-            <h3>Total:  <span id="cart-total">₹ {{ total }} </span></h3>
+            <h3>Total:  ₹ {{ total }} </h3>
         </div>
     </div>
 </div>
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             var formData = new FormData(form);
             var quantity = parseInt(formData.get('quantity'), 10);
-            console.log('quantity',quantity)
+   
            
             var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 

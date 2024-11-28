@@ -3,6 +3,7 @@ from django.views import View
 from shopping_site.application.cart_item.services import CartService
 from shopping_site.application.order.services import OrderApplicationService
 from shopping_site.application.authentication.services import UserApplicationService
+from shopping_site.domain.cart_item.models import Cart, CartItem
 from shopping_site.infrastructure.logger.models import logger
 from django.contrib import messages
 from shopping_site.interface.authentication.forms import UserAddressForm
@@ -16,8 +17,25 @@ from django.views.generic import TemplateView
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from functools import wraps
+from urllib.parse import parse_qs
 
 
+class ManageSession(View):
+    """
+    View class for handling the checkout process, including retrieving cart items,
+    user details, and managing the user's shipping address.
+    """
+
+    cart_service = CartService(log=logger)
+    user_service = UserApplicationService(log=logger)
+
+    def get(self, request,session_id):
+        if not request.session.session_key:
+                cart = Cart.objects.get(session_key=session_id)
+                cart.delete()
+                cart_items = CartItem.objects.filter(cart=cart)
+                cart_items.delete()
+        return JsonResponse({"success": True}, status=200)
 
 def login_required(view_func):
     """
@@ -31,7 +49,6 @@ def login_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
-
 
 
 
@@ -433,51 +450,6 @@ class SetDefaultAddressView(View):
             return redirect("checkout")
 
 
-class UpdateAddressView(View):
-    """
-    View class for handling the updating of a user's address via a JSON request.
-    """
-
-    @method_decorator(login_required)
-    def post(self, request, *args, **kwargs):
-        """
-        Handle POST requests to update a user's address with the provided JSON data.
-        """
-        data = json.loads(request.body)
-        address_id = data.get("id")
-        flat_building = data.get("flat_building")
-        area = data.get("area")
-        landmark = data.get("landmark")
-        city = data.get("city")
-
-        pincode = data.get("pincode")
-
-        try:
-            logger.info(
-                f"Update address POST request initiated by user: {request.user.username}"
-            )
-            user_service = UserApplicationService(
-                log=logger
-            )  # Ensure `logger` is defined in your view or globally
-            address = user_service.get_address_by_id(request.user, address_id)
-            address.flat_building = flat_building
-            address.area = area
-            address.landmark = landmark
-            address.city = city
-
-            address.pincode = pincode
-            address.save()
-            logger.debug(
-                f"Received data for updating address ID {address_id} for user {request.user.username}"
-            )
-
-            return JsonResponse({"success": True})
-        except Exception as e:
-            logger.error(
-                f"Error updating address for user {request.user.username}: {str(e)}"
-            )
-            return JsonResponse({"success": False, "message": "Address not found"})
-
 
 class OrderConfirmationView(TemplateView):
     """
@@ -624,8 +596,86 @@ class UserProfileView(View):
         """
         user_profile_service = OrderApplicationService()
         order_history = user_profile_service.get_order_history(request.user)
-        print(order_history,'order history')
+
+        
         return render(request, "profile.html", {"order_history": order_history})
+
+
+
+class UpdateAddressView(View):
+    """
+    View class for handling the updating of a user's address via a JSON request.
+    """
+
+    @method_decorator(login_required)
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests to update a user's address with the provided JSON data.
+        """
+      
+        if not request.body:
+                logger.error("Empty request body received")
+                return JsonResponse({"success": False, "message": "Empty request body"}, status=400)
+
+        if request.content_type == 'application/x-www-form-urlencoded':
+            data = parse_qs(request.body.decode('utf-8'))
+            # Convert the parsed data into a dictionary (remove the list that `parse_qs` returns)
+            data = {key: value[0] for key, value in data.items()}
+           
+        else:
+            # Try to load the request body as JSON
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                logger.error("Request body is not valid JSON")
+                return JsonResponse({"success": False, "message": "Invalid JSON format"}, status=400)
+
+        logger.debug(f"Request body: {data}")
+        logger.debug(f"Request content type: {request.content_type}")
+
+
+     
+        
+      
+        address_id = data.get("id", 31)
+        flat_building = data.get("flat_building")
+        area = data.get("area")
+        landmark = data.get("landmark")
+        city = data.get("city")
+        pincode = data.get("pincode")
+        
+
+        if not all([ flat_building, area, landmark, city, pincode]):
+            return JsonResponse({"success": False, "message": "Missing required fields"}, status=400)
+
+
+        try:
+            logger.info(
+                f"Update address POST request initiated by user: {request.user.username}"
+            )
+            user_service = UserApplicationService(
+                log=logger
+            ) 
+
+            address = user_service.get_address_by_id(request.user, address_id)
+       
+            address.flat_building = flat_building
+            address.area = area
+            address.landmark = landmark
+            address.city = city
+
+            address.pincode = pincode
+            address.save()
+            logger.debug(
+                f"Received data for updating address ID {address_id} for user {request.user.username}"
+            )
+
+            return JsonResponse({"success": True})
+        except Exception as e:
+            logger.error(
+                f"Error updating address for user {request.user.username}: {str(e)}"
+            )
+            return JsonResponse({"success": False, "message": "Address not found"})
 
 
 class TrackOrderView(View):

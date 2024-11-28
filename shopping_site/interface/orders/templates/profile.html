@@ -1,75 +1,272 @@
 {% extends 'base.html' %}
 
-{% block title %}Profile{% endblock %}
+{% block title %}User Profile{% endblock %}
+{% load static %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="mb-4">User Profile</h1>
 
+<div class="container-fluid mt-5">
+<h3> Hello , {{ user.username }} </h3>
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 p-3 bg-light">
+            <h4>User Dashboard</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="#profile" class="nav-link active" onclick="showTab('profile')">Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#orderHistory" class="nav-link" onclick="showTab('orderHistory')">Order History</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#changePassword" class="nav-link" onclick="showTab('changePassword')">Change Password</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#manageAddress" class="nav-link" onclick="showTab('manageAddress')">Manage Address</a>
+                </li>
+            </ul>
+        </div>
+
+   
+         <!-- Content Area -->
+        <div class="col-md-9 col-lg-10 p-3">
+            <div class="tab-content">
+                <!-- Profile Section -->
+                <div id="profile" class="tab-pane fade show active">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2>Profile Information</h2>
+                        </div>
+                        <div class="card-body">
+                          <!-- Profile Picture in Circle at the top of profile info -->
+                    <div class="profile-img-container mb-4 text-center">
+                        {% if user.profile.profile_picture %}
+                            <!-- If the user has a profile picture, show it -->
+                            <img src="{{ user.profile.profile_picture.url }}" alt="Profile Photo" class="rounded-circle" width="150" height="150">
+                        {% else %}
+                            <!-- If no profile picture, show default -->
+                            <img src="{% static 'default_profile.jpg' %}" alt="Default Profile" class="rounded-circle" width="150" height="150">
+                        {% endif %}
+                    </div>
+                            <form method="POST" enctype="multipart/form-data">
+                             {% comment %} action="{% url 'update_profile' %}"> {% endcomment %}
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fname">First Name</label>
+                                    <input type="text" class="form-control" id="fname" name="fname" value="{{ user.first_name }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="lname">Last Name</label>
+                                    <input type="text" class="form-control" id="lname" name="lname" value="{{ user.last_name }}" required>
+                                </div>
+
+                                <div class="form-group">
+                                    {% for address in user.address.all %}
+                                    <label for="mobile_number">Mobile Number</label>
+                                    <input type="text" class="form-control" id="mobile_number" name="mobile_number" value="{{ address.mobile_number }}" required>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="form-group">
+                                   
+                                    <label for="email">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                                </div>
+
+                                <!-- Gender Selection -->
+                                <div class="form-group">
+                                    <label for="gender">Gender</label><br>
+                                    <input type="radio" id="male" name="gender" value="Male" {% if user.profile.gender == 'Male' %}checked{% endif %}>
+                                    <label for="male">Male</label>
+                                    <input type="radio" id="female" name="gender" value="Female" {% if user.profile.gender == 'Female' %}checked{% endif %}>
+                                    <label for="female">Female</label>
+                                    <input type="radio" id="other" name="gender" value="Other" {% if user.profile.gender == 'Other' %}checked{% endif %}>
+                                    <label for="other">Other</label>
+                                </div>
+
+                                <!-- Profile Picture -->
+                                <div class="form-group">
+                                    <label for="profile_picture">Profile Photo</label>
+                                    <input type="file" class="form-control-file" id="profile_picture" name="profile_picture">
+                                    {% if user.profile.profile_picture %}
+                                        <div class="mt-3">
+                                            <img src="{{ user.profile.profile_picture.url }}" alt="Profile Photo" class="rounded-circle" width="150">
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Update Profile Button -->
+                                <button type="submit" class="btn btn-primary">Update Profile</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order History Section -->
+                <div id="orderHistory" class="tab-pane fade">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2>Your Orders</h2>
+                        </div>
+                        <div class="card-body">
+                            {% if order_history %}
+                            <ul class="list-group">
+                                {% for order in order_history %}
+                                <li class="list-group-item" data-order-id="{{ order.id }}">
+                                    <h5>Order ID: {{ order.id }}</h5>
+                                    <p>Status: {{ order.status }}</p>
+                                    <p>Items: {{ order.items }}</p>
+                                    <p>Date: {{ order.created_at }}</p>
+                                    <a href="{% url 'track_order' order.id %}" class="btn btn-primary btn-sm">Track Order</a>
+                                    {% if order.status != 'Cancelled' %}
+                                    <button class="btn btn-danger btn-sm cancel-order-btn">Cancel Order</button>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p>No orders found.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+
+
+    <!-- Manage Address Section -->
+    <div id="manageAddress" class="tab-pane fade">
     <div class="card mb-4">
         <div class="card-header">
-            <h2>Order History</h2>
+            <h2>Manage Address</h2>
         </div>
         <div class="card-body">
-            {% if order_history %}
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th> Items </th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in order_history %}
-                        <tr data-order-id="{{ order.id }}">
-                            <td>{{ order.id }}</td>
-                             <td>{{ order.items }}</td>
-                            <td>{{ order.status }}</td>
-                            <td>{{ order.created_at }}</td>
-                            <td>
-                                <a href="{% url 'track_order' order.id %}" class="btn btn-primary btn-sm track-order-btn">Track Order</a>
-                                {% if order.status != 'Cancelled' %}
-                                <button class="btn btn-danger btn-sm cancel-order-btn">Cancel Order</button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No orders found.</p>
-            {% endif %}
+             <form id="update-address-form" method="POST" action="{% url 'update_address' %}" >
+                {% csrf_token %}
+                <div class="row">
+                  
+                   
+                    
+
+                    <div class="col-md-6">
+                        {% for address in user.address.all %}
+               
+                        <input type="hidden" id="addressId_hidden" value="{{ address.id }}">
+
+                        {{ address.id }}
+
+                    <!-- Flat/Building -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="flat_building">Flat/Building:</label>
+                            <input type="text" class="form-control" id="flat_building" value="{{ address.flat_building }}" name="flat_building" required>
+                            {% if form.flat_building.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.flat_building.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Area -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="area">Area:</label>
+                            <input type="text" class="form-control" id="area" value="{{ address.area }} " name="area" required>
+                        </div>
+                    </div>
+
+                    <!-- Landmark -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="landmark">Landmark:</label>
+                            <input type="text" class="form-control" id="landmark" name="landmark"  value=" {{ address.landmark }}"required>
+                        </div>
+                    </div>
+
+                    <!-- Pincode -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="pincode">Pincode:</label>
+                            <input type="text" class="form-control" id="pincode" name="pincode" value= "{{ address.pincode }}"pattern="^\d{6}$" required>
+                        </div>
+                    </div>
+
+                    <!-- City -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="city">City:</label>
+                            <input type="text" class="form-control" id="city" value="{{ address.city }}" name="city" required>
+                        </div>
+                    </div>
+
+                    <!-- State -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="state">State:</label>
+                            <input type="text" class="form-control" id="state" name="state" value="{{ address.state }}" required>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Update Address</button>
+            </form>
         </div>
     </div>
 </div>
+    </div>
+    </div>
+    </div>
+</div>
+
+
+<script>
+    function showTab(tabId) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-pane').forEach(tab => {
+            tab.classList.remove('show', 'active');
+        });
+
+        // Show the selected tab
+        document.getElementById(tabId).classList.add('show', 'active');
+        
+        // Highlight the active link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        document.querySelector(`a[href="#${tabId}"]`).classList.add('active');
+    }
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("JavaScript Loaded");  // Check if script is loaded correctly
+
 
         // Ensure buttons exist
         const cancelButtons = document.querySelectorAll('.cancel-order-btn');
-        console.log(`Found ${cancelButtons.length} cancel buttons`);
+ 
 
         cancelButtons.forEach(function(button) {
             // Ensure event listener is being attached
-            console.log("Attaching event listener to cancel button");
+      
             
             button.addEventListener('click', function(event) {
-                event.preventDefault();  // Prevent default behavior (e.g., navigating to another page)
+                event.preventDefault();  
                 
                 // Get order ID
-                var orderId = button.closest('tr').dataset.orderId;
-                console.log("Cancel Order clicked for Order ID: " + orderId); 
+                var orderId = button.closest('li').dataset.orderId;
+            
                 
                 if (confirm('Are you sure you want to cancel this order?')) {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-                    console.log("AJAX request triggered");
+        
 
-                    fetch(`/cancel_order/${orderId}/`, {  // Use dynamic order ID
+                    fetch(`/orders/cancel_order/${orderId}/`, {  // Use dynamic order ID
                         method: 'POST',
                         headers: {
                             'X-CSRFToken': csrfToken
@@ -77,12 +274,11 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        console.log("Response from server:", data);
+                     
                         if (data.success) {
-                            button.closest('tr').querySelector('td:nth-child(2)').innerText = 'Cancelled'; // Update status
+                            const orderElement = button.closest('li');
+                            orderElement.querySelector('p:nth-of-type(2)').innerText = 'Status: Cancelled'; // Update status
                             button.remove(); 
-                          
-                            
 
                             alert('Order cancelled successfully.');
                         } else {
@@ -96,5 +292,54 @@
             });
         });
     });
+</script>
+
+<script>
+
+
+$(document).ready(function() {
+   
+    $('#update-address-form').on('submit', function(event) {
+        event.preventDefault();
+        
+        const addressId = 31; 
+
+        const flatBuilding = $("#flat_building").val();
+        const area = $("#area").val();
+        const landmark = $("#landmark").val();
+        const pincode = $("#pincode").val();
+        const city = $("#city").val();
+        const state = $("#state").val();
+
+        // Now send the collected data to the server
+        fetch(`/orders/update_address/${addressId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                flat_building: flatBuilding,
+                area: area,
+                landmark: landmark,
+                pincode: pincode,
+                city: city,
+                state: state
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Address updated successfully!');
+                // Optionally, update the UI to reflect the changes
+            } else {
+                alert('Failed to update address: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('An error occurred: ' + error.message);
+        });
+    });
+});
 </script>
 {% endblock %}

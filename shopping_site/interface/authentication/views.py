@@ -115,6 +115,9 @@ class LoginView(FormView):
         request.session['user_id'] = str(user.id)
         request.session['username'] = user.username
 
+        request.session.modified = True
+
+
     def form_invalid(self, form):
         """
         Handles invalid form submission. Logs form errors and displays them to the user.

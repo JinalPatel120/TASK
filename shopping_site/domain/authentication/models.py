@@ -59,6 +59,9 @@ class User(AbstractUser):
     password = models.CharField(max_length=255, null=False, blank=False)
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=[("M", "Male"), ("F", "Female"), ("O", "Other")], blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     # Activity tracking fields
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -83,6 +86,7 @@ class UserAddress(models.Model):
     pincode = models.CharField(max_length=6)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
+    address_type = models.CharField(max_length=50, choices=[('home', 'Home'), ('office', 'Office')], default='home')
     is_default = models.BooleanField(default=True)
 
     class Meta:

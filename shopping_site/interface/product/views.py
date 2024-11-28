@@ -227,16 +227,13 @@ class ProductUpdateView(SuperuserRequiredMixin,View):
             "quantity": data.get("quantity"),
         }
 
-        # Access the image file using request.FILES
         image = request.FILES.get("image")
         if image:
-            # If the image is uploaded, handle saving the file
-            fs = FileSystemStorage(location='media/products')  # Adjust the path as needed
+            fs = FileSystemStorage(location='shopping_site/interface/product/product_image')  
             filename = fs.save(image.name, image)
-            product_data["image"] = fs.url(filename)  # Store the URL or path of the image
+            product_data["image"] = fs.url(filename)  
         else:
-            # If no new image is uploaded, keep the existing image path (handle this part)
-            existing_image = request.POST.get("existing_image")  # Assuming you have a hidden field for the existing image
+            existing_image = request.POST.get("existing_image")  
             if existing_image:
                 product_data["image"] = existing_image  # Retain the existing image path
 

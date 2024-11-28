@@ -139,7 +139,7 @@
 <script>
     // Function to update cart count in the navigation bar
     function updateCartCount() {
-        fetch('/update_cart_count/')
+        fetch('/cart/update_cart_count/')
             .then(response => response.json())
             .then(data => {
                 if (data.cart_count !== undefined) {
@@ -170,7 +170,7 @@
             this.disabled = true;
             this.textContent = "Adding...";
 
-            fetch(`/add_to_cart/${productId}/`, {
+            fetch(`/cart/add_to_cart/${productId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

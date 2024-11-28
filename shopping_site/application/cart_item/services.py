@@ -22,7 +22,9 @@ class CartService:
 
     def get_or_create_cart_for_user(self, user) -> Cart:
         """Fetch or create a cart for a logged-in user"""
+        print('Cart.objects.get_or_create(user=user, is_active=True)',Cart.objects.get_or_create(user=user, is_active=True))
         cart, created = Cart.objects.get_or_create(user=user, is_active=True)
+        print(cart,'cart')
         return cart
 
     def get_or_create_cart_for_anonymous_user(self, session_key: str) -> Cart:
@@ -40,6 +42,7 @@ class CartService:
         # Return the cart
         return cart
 
+    
     def add_product_to_cart(
         self, cart: Cart, product: Product, quantity: int
     ) -> CartItem:
@@ -67,7 +70,6 @@ class CartService:
 
         try:
             user = User.objects.get(username=username)
-            print("user", user)
             return user.first_name, user.last_name
         except User.DoesNotExist:
             return None, None

@@ -196,6 +196,8 @@ class OrderApplicationService:
                     "status": order.status,
                     "created_at": order.order_date,
                     "items": ", ".join(item_names),
+                    "total_price": order.total_amount,  
+                    "shipping_address": order.shipping_address,
                 }
             )
         return order_data

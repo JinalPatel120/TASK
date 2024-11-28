@@ -165,7 +165,7 @@
             var pincode = button.getAttribute('data-pincode');
 
 
-            console.log('address iddddddddddddddddddddddddddddddddddddd',addressId)
+       
             var modalFlatBuilding = editAddressModal.querySelector('#flat_building');
             var modalArea=editAddressModal.querySelector('#area');
             var modalLandmark=editAddressModal.querySelector('#landmark');
@@ -195,8 +195,8 @@
                     pincode: modalPincode.value
                 };
 
-                // Send the updated address to backend for saving
-                fetch('/api/update_address', {
+               
+                fetch('/orders/update_address', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -224,9 +224,6 @@
         // Remove Address Function
         function removeAddress(button) {
     var addressId = button.getAttribute('data-address-id');
-    
-    // Log the addressId to the console for debugging
-    console.log('Address ID:', addressId);
 
     if (addressId === null || addressId === undefined) {
         alert('Error: Address ID is null or undefined');
@@ -235,7 +232,7 @@
 
     // Confirm the action
     if (confirm('Are you sure you want to remove this address?')) {
-        fetch(`/api/remove_address/${addressId}/`, {
+        fetch(`/orders/remove_address/${addressId}/`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
