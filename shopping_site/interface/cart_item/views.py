@@ -30,10 +30,10 @@ class AddToCartView(View):
             if quantity > product.quantity:
                 return JsonResponse({'error': f"Sorry, only {product.quantity} of this product is available."}, status=400)
             
-            print('heloooooooooooooooo from here')
+            
             if request.user.is_authenticated:
                 cart = self.cart_service.get_or_create_cart_for_user(request.user)
-                print('carttttttttttttttttt',cart)
+           
                 request.session.modified = True
             else:
                 cart = self.cart_service.get_or_create_cart_for_anonymous_user(request.session.session_key)

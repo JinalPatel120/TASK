@@ -91,13 +91,13 @@
     
     let session= document.querySelector("#hidden-input");
     
-    const manage_session = fetch(`/manage_session/${session.getAttribute("value")}`)
+    const manage_session = fetch(`/orders/manage_session/${session.getAttribute("value")}`)
     .then(response => response.json())
     .then(data => {
         console.log(data);
         
     });
-    console.log(`/manage_session/${session.getAttribute("value")}`,"heloooooooooooooooooooooooo",manage_session)
+    console.log(`/orders/manage_session/${session.getAttribute("value")}`,"heloooooooooooooooooooooooo",manage_session)
    
 }
 window.onbeforeunload = closeIt;

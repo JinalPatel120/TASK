@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from shopping_site.application.cart_item.services import CartService
 from shopping_site.application.order.services import OrderApplicationService
@@ -29,27 +29,31 @@ class ManageSession(View):
     cart_service = CartService(log=logger)
     user_service = UserApplicationService(log=logger)
 
-    def get(self, request,session_id):
+    def get(self, request, session_id):
         if not request.session.session_key:
-                cart = Cart.objects.get(session_key=session_id)
-                cart.delete()
-                cart_items = CartItem.objects.filter(cart=cart)
-                cart_items.delete()
+            cart = get_object_or_404(Cart, session_key=session_id)
+            cart.delete()
+            cart_items = CartItem.objects.filter(cart=cart)
+            cart_items.delete()
+
+        if request.user.is_authenticated:
+            cart = Cart.objects.update(session_key=session_id)
         return JsonResponse({"success": True}, status=200)
+
 
 def login_required(view_func):
     """
     Decorator to check if the user is authenticated. If not, redirect to the login page.
     """
+
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
             messages.error(request, "You must be logged in to proceed to this page.")
-            return redirect("login")  
+            return redirect("login")
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
-
 
 
 class CheckoutView(View):
@@ -88,7 +92,9 @@ class CheckoutView(View):
             total = sum(item.total_price for item in cart_items)
             logger.info(f"Total price calculated: {total}")
 
-            saved_address = self.user_service.get_user_addresses(request.user,single=True)
+            saved_address = self.user_service.get_user_addresses(
+                request.user, single=True
+            )
             if saved_address:
                 logger.info(
                     f"Redirecting user {request.user.username} to order summary page."
@@ -212,7 +218,7 @@ class OrderSummaryView(View):
             total = sum(item.total_price for item in cart_items)
             logger.info(f"Total price calculated: {total}")
 
-            addresses = self.user_service.get_user_addresses(request.user,single=False)
+            addresses = self.user_service.get_user_addresses(request.user, single=False)
             logger.info(f"Retrieved addresses for user: {request.user.username}")
 
             return render(
@@ -432,7 +438,7 @@ class SetDefaultAddressView(View):
             logger.info(
                 f"Set default address POST request initiated by user: {request.user.username}"
             )
-            address = self.user_service.get_user_addresses(request.user,single=True)
+            address = self.user_service.get_user_addresses(request.user, single=True)
 
             logger.debug(
                 f"Address retrieved for user {request.user.username}: {address}"
@@ -448,7 +454,6 @@ class SetDefaultAddressView(View):
             )
             messages.error(request, "Error setting default address.")
             return redirect("checkout")
-
 
 
 class OrderConfirmationView(TemplateView):
@@ -485,8 +490,7 @@ class OrderConfirmationView(TemplateView):
         # If order exists, proceed to generate the context
         return super().dispatch(request, *args, **kwargs)
 
- 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         """
         Retrieve context data for rendering the template.
         """
@@ -517,7 +521,6 @@ class DownloadInvoiceView(View):
 
     @method_decorator(login_required)
     def get(self, request, order_id):
-
         """
         Handle GET requests to download the invoice for an order.
         """
@@ -540,8 +543,9 @@ class DownloadInvoiceView(View):
 
         except Exception as e:
             logger.error(f"Error generating invoice for order ID {order_id}: {str(e)}")
-            return HttpResponse("An error occurred while generating the invoice.", status=500)
-
+            return HttpResponse(
+                "An error occurred while generating the invoice.", status=500
+            )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -591,15 +595,13 @@ class UserProfileView(View):
         """
         Renders the user profile page with order history.
 
-        This view fetches the order history of the currently logged-in user 
+        This view fetches the order history of the currently logged-in user
         and renders it on the "profile.html" page.
         """
         user_profile_service = OrderApplicationService()
         order_history = user_profile_service.get_order_history(request.user)
 
-        
         return render(request, "profile.html", {"order_history": order_history})
-
 
 
 class UpdateAddressView(View):
@@ -612,60 +614,39 @@ class UpdateAddressView(View):
         """
         Handle POST requests to update a user's address with the provided JSON data.
         """
-      
-        if not request.body:
-                logger.error("Empty request body received")
-                return JsonResponse({"success": False, "message": "Empty request body"}, status=400)
 
-        if request.content_type == 'application/x-www-form-urlencoded':
-            data = parse_qs(request.body.decode('utf-8'))
-            # Convert the parsed data into a dictionary (remove the list that `parse_qs` returns)
-            data = {key: value[0] for key, value in data.items()}
-           
-        else:
-            # Try to load the request body as JSON
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                logger.error("Request body is not valid JSON")
-                return JsonResponse({"success": False, "message": "Invalid JSON format"}, status=400)
+        data = json.loads(request.body)
 
-        logger.debug(f"Request body: {data}")
-        logger.debug(f"Request content type: {request.content_type}")
-
-
-     
-        
-      
-        address_id = data.get("id", 31)
+        address_id = data.get("id")
         flat_building = data.get("flat_building")
         area = data.get("area")
         landmark = data.get("landmark")
         city = data.get("city")
         pincode = data.get("pincode")
-        
-
-        if not all([ flat_building, area, landmark, city, pincode]):
-            return JsonResponse({"success": False, "message": "Missing required fields"}, status=400)
-
 
         try:
             logger.info(
                 f"Update address POST request initiated by user: {request.user.username}"
             )
-            user_service = UserApplicationService(
-                log=logger
-            ) 
+            user_service = UserApplicationService(log=logger)
 
             address = user_service.get_address_by_id(request.user, address_id)
-       
             address.flat_building = flat_building
             address.area = area
             address.landmark = landmark
             address.city = city
-
             address.pincode = pincode
-            address.save()
+            from django.db import transaction
+
+            try:
+                with transaction.atomic():
+                    address.save()
+            except Exception as e:
+                logger.error(f"Error saving address: {str(e)}")
+                return JsonResponse(
+                    {"success": False, "message": "Error saving address"}
+                )
+
             logger.debug(
                 f"Received data for updating address ID {address_id} for user {request.user.username}"
             )
@@ -684,7 +665,7 @@ class TrackOrderView(View):
         """
         Renders the order tracking page for a specific order.
 
-        This view fetches the status of a particular order and renders it 
+        This view fetches the status of a particular order and renders it
         on the "track_order.html" page.
         """
         user_profile_service = OrderApplicationService()
@@ -695,14 +676,13 @@ class TrackOrderView(View):
             return redirect("profile")
 
 
-
 class CancelOrderView(View):
     @method_decorator(login_required)
     def post(self, request, order_id):
         """
         Cancels an order for the logged-in user.
 
-        This view attempts to cancel an order by its ID for the currently logged-in 
+        This view attempts to cancel an order by its ID for the currently logged-in
         user and returns a JSON response indicating success or failure.
         """
         user_profile_service = OrderApplicationService()
@@ -710,9 +690,14 @@ class CancelOrderView(View):
 
         if order:
             # If the order was successfully cancelled
-            return JsonResponse({'success': True, 'message': 'Order has been cancelled successfully.'})
+            return JsonResponse(
+                {"success": True, "message": "Order has been cancelled successfully."}
+            )
         else:
             # If the order wasn't found or couldn't be cancelled
-            return JsonResponse({'success': False, 'message': 'Unable to cancel order. Please try again.'})
-
-
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Unable to cancel order. Please try again.",
+                }
+            )

@@ -13,6 +13,7 @@ from .views import (
     CancelOrderView,
     TrackOrderView,
     ManageSession,
+  
 )
 
 urlpatterns = [
@@ -29,5 +30,6 @@ urlpatterns = [
     path("track_order/<int:order_id>/", TrackOrderView.as_view(), name="track_order"),
     path("cancel_order/<int:order_id>/", CancelOrderView.as_view(), name="cancel_order"),
     path("manage_session/<str:session_id>/", ManageSession.as_view(),name="manage_session"),
+
     
 ]

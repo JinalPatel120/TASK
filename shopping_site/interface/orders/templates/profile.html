@@ -53,28 +53,28 @@
                                 {% csrf_token %}
                                 <div class="form-group">
                                     <label for="username">Username</label>
-                                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" >
                                 </div>
                                 <div class="form-group">
                                     <label for="fname">First Name</label>
-                                    <input type="text" class="form-control" id="fname" name="fname" value="{{ user.first_name }}" required>
+                                    <input type="text" class="form-control" id="fname" name="fname" value="{{ user.first_name }}" >
                                 </div>
                                 <div class="form-group">
                                     <label for="lname">Last Name</label>
-                                    <input type="text" class="form-control" id="lname" name="lname" value="{{ user.last_name }}" required>
+                                    <input type="text" class="form-control" id="lname" name="lname" value="{{ user.last_name }}" >
                                 </div>
 
                                 <div class="form-group">
                                     {% for address in user.address.all %}
                                     <label for="mobile_number">Mobile Number</label>
-                                    <input type="text" class="form-control" id="mobile_number" name="mobile_number" value="{{ address.mobile_number }}" required>
+                                    <input type="text" class="form-control" id="mobile_number" name="mobile_number" value="{{ address.mobile_number }}" >
                                     {% endfor %}
                                 </div>
 
                                 <div class="form-group">
                                    
                                     <label for="email">Email</label>
-                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" >
                                 </div>
 
                                 <!-- Gender Selection -->
@@ -106,6 +106,35 @@
                     </div>
                 </div>
 
+                            <!-- Change Password Section -->
+                <div id="changePassword" class="tab-pane fade">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2>Change Password</h2>
+                        </div>
+                        <div class="card-body">
+                            {% comment %} <form method="POST" action="{% url 'change_password' %}"> {% endcomment %}
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="old_password">Current Password</label>
+                                <input type="password" class="form-control" id="old_password" name="old_password" >
+                            </div>
+                            <div class="form-group">
+                                <label for="new_password">New Password</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" >
+                            </div>
+                            <div class="form-group">
+                                <label for="re_new_password">Re-enter New Password</label>
+                                <input type="password" class="form-control" id="re_new_password" name="re_new_password" >
+                            </div>
+                            <br>
+                            <button type="submit" class="btn btn-primary">Change Password</button>
+              
+                        </div>
+                    </div>
+                </div>
+				
+				
                 <!-- Order History Section -->
                 <div id="orderHistory" class="tab-pane fade">
                     <div class="card mb-4">
@@ -144,17 +173,14 @@
             <h2>Manage Address</h2>
         </div>
         <div class="card-body">
-             <form id="update-address-form" method="POST" action="{% url 'update_address' %}" >
+             <form id="update-address-form" >
                 {% csrf_token %}
                 <div class="row">
-                  
-                   
-                    
-
                     <div class="col-md-6">
                         {% for address in user.address.all %}
                
-                        <input type="hidden" id="addressId_hidden" value="{{ address.id }}">
+  
+                        <input type="hidden" name="id" id="id" value="{{ address.id }}">  <!-- Hidden input for address_id -->
 
                         {{ address.id }}
 
@@ -162,7 +188,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="flat_building">Flat/Building:</label>
-                            <input type="text" class="form-control" id="flat_building" value="{{ address.flat_building }}" name="flat_building" required>
+                            <input type="text" class="form-control" id="flat_building" value="{{ address.flat_building }}" name="flat_building" >
                             {% if form.flat_building.errors %}
                                 <div class="text-danger">
                                     {% for error in form.flat_building.errors %}
@@ -177,7 +203,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="area">Area:</label>
-                            <input type="text" class="form-control" id="area" value="{{ address.area }} " name="area" required>
+                            <input type="text" class="form-control" id="area" value="{{ address.area }} " name="area" >
                         </div>
                     </div>
 
@@ -185,7 +211,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="landmark">Landmark:</label>
-                            <input type="text" class="form-control" id="landmark" name="landmark"  value=" {{ address.landmark }}"required>
+                            <input type="text" class="form-control" id="landmark" name="landmark"  value=" {{ address.landmark }}">
                         </div>
                     </div>
 
@@ -193,7 +219,7 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="pincode">Pincode:</label>
-                            <input type="text" class="form-control" id="pincode" name="pincode" value= "{{ address.pincode }}"pattern="^\d{6}$" required>
+                            <input type="text" class="form-control" id="pincode" name="pincode" value= "{{ address.pincode }}"pattern="^\d{6}$" >
                         </div>
                     </div>
 
@@ -201,17 +227,11 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="city">City:</label>
-                            <input type="text" class="form-control" id="city" value="{{ address.city }}" name="city" required>
+                            <input type="text" class="form-control" id="city" value="{{ address.city }}" name="city" >
                         </div>
                     </div>
 
-                    <!-- State -->
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="state">State:</label>
-                            <input type="text" class="form-control" id="state" name="state" value="{{ address.state }}" required>
-                        </div>
-                    </div>
+                    
                 </div>
                 {% endfor %}
                 <button type="submit" class="btn btn-primary">Update Address</button>
@@ -296,50 +316,76 @@
 
 <script>
 
+    document.getElementById("update-address-form").addEventListener("submit", function(event) {
+        event.preventDefault(); // Prevents the default form submission
 
-$(document).ready(function() {
+        // Collect form data
+        const formData = new FormData(event.target);
+        const data = {};
+        const errorMessages = []; 
    
-    $('#update-address-form').on('submit', function(event) {
-        event.preventDefault();
-        
-        const addressId = 31; 
 
-        const flatBuilding = $("#flat_building").val();
-        const area = $("#area").val();
-        const landmark = $("#landmark").val();
-        const pincode = $("#pincode").val();
-        const city = $("#city").val();
-        const state = $("#state").val();
+        formData.forEach((value, key) => {
+            data[key] = value;
+        });
+        console.log(data,'data');
+     
+        console.log("{% url 'update_address' %}",'url');  // Log the generated URL
 
-        // Now send the collected data to the server
-        fetch(`/orders/update_address/${addressId}/`, {
-            method: 'POST',
+        const requiredFields = ["id", "flat_building", "area", "landmark", "city", "pincode"];
+        requiredFields.forEach(field => {
+            if (!data[field] || data[field].trim() === "") {
+                errorMessages.push(`The ${field.replace("_", " ")} field is required.`);
+            }
+        });
+
+        // If there are validation errors, display them and stop the form submission
+        if (errorMessages.length > 0) {
+            alert(errorMessages.join("\n"));
+            return;
+        }
+
+        // Send the data via fetch (AJAX request)
+        fetch("{% url 'update_address' %}", {
+            method: "POST",
             headers: {
-                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content'),
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json", // We are sending JSON
+                "X-CSRFToken": getCookie('csrftoken')  // Add CSRF token for Django security
             },
-            body: JSON.stringify({
-                flat_building: flatBuilding,
-                area: area,
-                landmark: landmark,
-                pincode: pincode,
-                city: city,
-                state: state
-            })
+            body: JSON.stringify(data)  // Convert the data object to JSON
         })
         .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Address updated successfully!');
-                // Optionally, update the UI to reflect the changes
+        .then(responseData => {
+            console.log('Server response:', responseData);
+            if (responseData.success) {
+                alert("Address updated successfully!");
             } else {
-                alert('Failed to update address: ' + data.message);
+                alert("Error updating address: " + responseData.message);
             }
         })
         .catch(error => {
-            alert('An error occurred: ' + error.message);
+            console.error("Error submitting the form:", error);
+            alert("Error submitting the form.");
         });
     });
-});
+
+    // Utility function to get CSRF token from the browser cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");  // Split all cookies
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+
 </script>
 {% endblock %}
