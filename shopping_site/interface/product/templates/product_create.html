@@ -1,0 +1,167 @@
+<!-- shopping_site/interface/product/templates/product_create.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}Add New Product{% endblock %}
+
+{% block content %}
+{% if messages %}
+            {% for message in messages %}
+                {% if message.level == 40 %} <!-- Error message -->
+                    <li class="alert alert-danger">{{ message }}</li>
+                {% elif message.level == 25 %} <!-- Success message -->
+                    <li class="alert alert-success">{{ message }}</li>
+                {% else %}
+                    <li class="alert alert-info">{{ message }}</li> 
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        
+    <h1 class="text-center mb-4">Add New Product</h1>
+    <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label for="id_title" class="form-label">Product Title</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.title.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_description" class="form-label">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.description.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_price" class="form-label">Price</label>
+            {{ form.price }}
+            {% if form.price.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.price.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_quantity" class="form-label">Quantity</label>
+            {{ form.quantity }}
+            {% if form.quantity.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.quantity.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_image" class="form-label">Product Image</label>
+            {{ form.image }}
+            {% if form.image.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.image.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Product</button>
+        <a href="{% url 'product_manage' %}">Back to Product List</a>
+    </form>
+
+    <script>
+        // Custom JavaScript validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            let valid = true;
+
+            // Title validation: Check for required and max length
+            const title = document.getElementById('id_title');
+            const titleError = document.getElementById('titleError');
+            if (title.value.trim() === '') {
+                titleError.textContent = 'Product title is required.';
+                title.classList.add('is-invalid');
+                valid = false;
+            } else if (title.value.length > 100) {
+                titleError.textContent = 'Title must not exceed 100 characters.';
+                title.classList.add('is-invalid');
+                valid = false;
+            } else {
+                title.classList.remove('is-invalid');
+            }
+
+            // Description validation: Required field
+            const description = document.getElementById('id_description');
+            const descriptionError = document.getElementById('descriptionError');
+            if (description.value.trim() === '') {
+                descriptionError.textContent = 'Description is required.';
+                description.classList.add('is-invalid');
+                valid = false;
+            } else {
+                description.classList.remove('is-invalid');
+            }
+
+            // Price validation: Check for required and positive number
+            const price = document.getElementById('id_price');
+            const priceError = document.getElementById('priceError');
+            if (price.value.trim() === '') {
+                priceError.textContent = 'Price is required.';
+                price.classList.add('is-invalid');
+                valid = false;
+            } else if (parseFloat(price.value) <= 0) {
+                priceError.textContent = 'Price must be a positive number.';
+                price.classList.add('is-invalid');
+                valid = false;
+            } else {
+                price.classList.remove('is-invalid');
+            }
+
+            // Quantity validation: Required and positive integer
+            const quantity = document.getElementById('id_quantity');
+            const quantityError = document.getElementById('quantityError');
+            if (quantity.value.trim() === '') {
+                quantityError.textContent = 'Quantity is required.';
+                quantity.classList.add('is-invalid');
+                valid = false;
+            } else if (parseInt(quantity.value) <= 0) {
+                quantityError.textContent = 'Quantity must be a positive integer.';
+                quantity.classList.add('is-invalid');
+                valid = false;
+            } else {
+                quantity.classList.remove('is-invalid');
+            }
+
+            // Image validation: Check for required file upload
+            const image = document.getElementById('id_image');
+            const imageError = document.getElementById('imageError');
+            if (!image.files.length) {
+                imageError.textContent = 'Product image is required.';
+                image.classList.add('is-invalid');
+                valid = false;
+            } else {
+                image.classList.remove('is-invalid');
+            }
+
+            if (!valid) {
+                event.preventDefault(); // Prevent form submission if any validation fails
+            }
+        });
+    </script>
+
+{% endblock %}

@@ -1,0 +1,49 @@
+
+
+{% extends 'base.html' %}
+
+{% block title %}Manage Products{% endblock %}
+
+{% block content %}
+{% if messages %}
+            {% for message in messages %}
+                {% if message.level == 40 %} <!-- Error message -->
+                    <li class="alert alert-danger">{{ message }}</li>
+                {% elif message.level == 25 %} <!-- Success message -->
+                    <li class="alert alert-success">{{ message }}</li>
+                {% else %}
+                    <li class="alert alert-info">{{ message }}</li> 
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    <h1>Update Product</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="title">Title:</label><br>
+        <input type="text" id="title" name="title" value="{{ product_data.title }}" required><br><br>
+        
+        <label for="description">Description:</label><br>
+        <textarea id="description" name="description" required>{{ product_data.description }}</textarea><br><br>
+        
+        <label for="price">Price:</label><br>
+        <input type="number" id="price" name="price" value="{{ product_data.price }}" step="0.01" required><br><br>
+        
+        <label for="quantity">Quantity:</label><br>
+        <input type="number" id="quantity" name="quantity" value="{{ product_data.quantity }}" required><br><br>
+        
+        <label for="image">Image:</label><br>
+        <label for="image">Image:</label><br>
+        {% if product_data.image %}
+            <img src="{{ product_data.image.url }}" alt="Product Image" width="100"><br><br>
+            <input type="hidden" name="existing_image" value="{{ product_data.image }}"> <!-- Store existing image path in a hidden field -->
+        {% endif %}
+        
+        <input type="file" id="image" name="image"><br><br> 
+        
+        <button type="submit">Update Product</button>
+    </form>
+    <a href="{% url 'product_manage' %}">Back to Product List</a>
+</body>
+</html>
+
+{% endblock %}

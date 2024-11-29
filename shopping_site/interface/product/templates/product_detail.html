@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.title }}{% endblock %}
+
+{% block content %}
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}
+        {% if message.level == 40 %} <!-- Error message -->
+            <li class="alert alert-danger">{{ message }}</li>
+        {% elif message.level == 25 %} <!-- Success message -->
+            <li class="alert alert-success">{{ message }}</li>
+        {% else %}
+            <li class="alert alert-info">{{ message }}</li> <!-- Other types of messages -->
+        {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
+    <div class="row">
+        <div class="col-md-6">
+            <img src="{{ product.image.url }}" class="img-fluid" alt="{{ product.title }}">
+        </div>
+        <div class="col-md-6">
+            <h1>{{ product.title }}</h1>
+            <p class="lead">{{ product.description }}</p>
+            <h3>₹ {{ product.price }}</h3>
+            <p>In Stock: {{ product.quantity }}</p>
+
+            <!-- Product Add to Cart Form -->
+            <form method="POST" class="add-to-cart-form" data-product-id="{{ product.id }}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="quantity_{{ product.id }}" class="form-label">Quantity</label>
+                <input type="number" class="form-control" id="quantity_{{ product.id }}" name="quantity" value="1" min="1" max="{{ product.quantity }}">
+        
+                <div id="error-message_{{ product.id }}" class="text-danger d-none">
+                    You can only enter a quantity of up to {{ product.quantity }}.
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}">Add to Cart</button>
+        </form>
+        </div>
+    </div>
+    <a href="{% url 'product_list' %}" class="btn btn-secondary mt-3">Back to Product List</a>
+    
+    <!-- Custom JavaScript for validation -->
+    <script>
+       document.getElementById('product-form').addEventListener('submit', function(event) {
+            var quantityInput = document.getElementById('quantity');
+            var errorMessage = document.getElementById('error-message');
+            var quantity = parseInt(quantityInput.value);
+            var maxQuantity = parseInt(quantityInput.max);  // The max quantity available for this product
+
+            // Reset the error message display
+            errorMessage.classList.add('d-none');
+
+            // Check if the entered quantity is a positive integer greater than 0
+            if (quantity <= 0) {
+                errorMessageQuantity.classList.remove('d-none');
+                event.preventDefault();
+                return;
+            }
+            // Custom validation: Check if the entered quantity exceeds available stock
+            if (quantity > maxQuantity) {
+                // Display custom error message
+                errorMessage.classList.remove('d-none');
+                // Prevent form submission
+                event.preventDefault();
+            }
+        }); 
+
+    
+    // Event listener for "Add to Cart" button click
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const quantityInput = document.getElementById('quantity_' + productId);
+            const quantity = quantityInput ? quantityInput.value : 1;
+            console.log("Product ID: " + productId + ", Quantity: " + quantity);
+
+          
+
+            // Send a POST request to add the product to the cart
+            fetch(`/add_to_cart/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify({ quantity: quantity })
+            })
+          
+
+            .then(response => response.json())
+            .then(data => {
+                console.log("Response Data:", data);
+                if (data.cart_count !== undefined && data.message !== undefined) {
+                    updateCartCount();  
+                    alert(data.message); 
+                } else {
+                    alert('Error adding product to cart.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+</script>
+    </script>
+{% endblock %}

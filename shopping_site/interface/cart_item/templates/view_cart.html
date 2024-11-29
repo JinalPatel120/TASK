@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Your Cart{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            {% if message.level == 40 %} <!-- Error message -->
+                <li class="alert alert-danger">{{ message }}</li>
+            {% elif message.level == 25 %} <!-- Success message -->
+                <li class="alert alert-success">{{ message }}</li>
+            {% else %}
+                <li class="alert alert-info">{{ message }}</li> <!-- Other types of messages -->
+            {% endif %}
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <div id="ajax-messages"></div> <!-- Container for AJAX messages -->
+    <h1>Your Cart</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart_items %}
+            <tr data-item-id="{{ item.id }}">
+                <td>{{ item.product.title }}</td>
+                <td>
+                    <form class="update-cart-item-form" method="post" action="{% url 'update_cart_item' item.id %}">
+                        {% csrf_token %}
+                        <input type="number" name="quantity" value="{{ item.quantity }}" />
+                        <button type="submit" class="btn btn-warning">Update</button>
+                    </form>
+                </td>
+                <td>₹ {{ item.product.price }}</td>
+                <td class="item-total-price">₹ {{ item.total_price }}</td>
+                <td>
+                    <form method="post" action="{% url 'remove_cart_item' item.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'product_list' %}" class="btn btn-primary">Continue Shopping</a>
+        <a href="{% url 'checkout' %}" class="btn btn-success">Proceed to Checkout</a>
+        <div class="total-amount">
+            <h3>Total:  ₹ {{ total }} </h3>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.update-cart-item-form').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+            
+            var formData = new FormData(form);
+            var quantity = parseInt(formData.get('quantity'), 10);
+   
+           
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            if (quantity > 20) {
+                // Set the quantity to 20 if it exceeds the limit
+                formData.set('quantity', '20');
+                // Display a message to the user
+                var messagesContainer = document.getElementById('ajax-messages');
+                messagesContainer.innerHTML = '<div class="alert alert-warning">Only 20 items were available, so the quantity has been updated.</div>';
+                // Update the quantity input field to reflect the change
+                form.querySelector('input[name="quantity"]').value = 20;
+            }
+            var url = form.action;
+            var itemId = form.closest('tr').dataset.itemId;
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                var messagesContainer = document.getElementById('ajax-messages');
+                messagesContainer.innerHTML = ''; 
+                
+                if (data.success) {
+                    messagesContainer.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                    
+                    // Update the total price for the cart item
+                    var itemRow = document.querySelector('tr[data-item-id="' + itemId + '"]');
+                    if (itemRow) {
+                        var totalPriceElement = itemRow.querySelector('.item-total-price');
+                        if (totalPriceElement) {
+                            totalPriceElement.innerText = '₹ ' + data.total_price;
+                        } else {
+                            console.error('Total price element not found for item ID:', itemId);
+                        }
+                    } else {
+                        console.error('Item row not found for item ID:', itemId);
+                    }
+
+                    // Optionally update the cart total
+                    var cartTotalElement = document.getElementById('cart-total');
+                    if (cartTotalElement) {
+                        cartTotalElement.innerText = data.cart_total;
+                    } else {
+                        console.error('Cart total element not found');
+                    }
+                } else {
+                    messagesContainer.innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                var messagesContainer = document.getElementById('ajax-messages');
+                messagesContainer.innerHTML = '<div class="alert alert-danger">An error occurred: ' + error.message + '</div>';
+            });
+        });
+    });
+});
+
+</script>
+
+{% endblock %}

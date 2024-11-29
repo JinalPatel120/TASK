@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}verify otp{% endblock %}
+
+{% block content %}
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .disabled-link {
+            pointer-events: none;
+            color: grey;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Verify OTP</h2>
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.level == 40 %} <!-- Error message -->
+                    <li class="alert alert-danger">{{ message }}</li>
+                {% elif message.level == 25 %} <!-- Success message -->
+                    <li class="alert alert-success">{{ message }}</li>
+                {% else %}
+                    <li class="alert alert-info">{{ message }}</li> 
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <p>Didn't receive the OTP? 
+                <a href="{% url 'verify_otp' %}?resend=true&token={{ request.GET.token }}" id="resendOtpLink" class="disabled-link">Resend OTP</a></p>
+            </p>
+
+            <button type="submit" class="btn btn-primary">Verify</button>
+            <button class="btn btn-secondary">
+                <a href="{% url 'forgot_password' %}" style="color: white; text-decoration: none;">Back</a>
+            </button>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var resendLink = document.getElementById("resendOtpLink");
+            var countdown = 5; 
+
+            var interval = setInterval(function() {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    resendLink.classList.remove("disabled-link");
+                    resendLink.innerHTML = "Resend OTP";
+                } else {
+                    resendLink.innerHTML = "Resend OTP in " + countdown + "s";
+                }
+            }, 1000);
+        });
+    </script>
+{% endblock %}
