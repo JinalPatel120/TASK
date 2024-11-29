@@ -53,7 +53,7 @@
                 </label>
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <!-- Edit Address Button -->
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editAddressModal" data-address-id="{{ address.id }}" data-flat-building="{{ address.flat_building }}" data-area="{{ address.area }}" data-landmark="{{ address.landmark }}" data-city="{{ address.city }}"  data-pincode="{{ address.pincode }}">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editAddressModal" data-address-id="{{ address.id }}" data-flat-building="{{ address.flat_building }}" data-area="{{ address.area }}" data-landmark="{{ address.landmark }}" data-city="{{ address.city }}"  data-pincode="{{ address.pincode }}" data-state="{{ address.state }}">
                     Edit Address
                 </button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 
@@ -136,6 +136,10 @@
                             <label for="city" class="form-label">City</label>
                             <input type="text" class="form-control" id="city" required>
                         </div>
+                        <div class="mb-3">
+                            <label for="state" class="form-label">State</label>
+                            <input type="text" class="form-control" id="state" required>
+                        </div>
                        
                         <div class="mb-3">
                             <label for="pincode" class="form-label">Pincode</label>
@@ -161,6 +165,7 @@
             var area=button.getAttribute('data-area');
             var landmark=button.getAttribute('data-landmark');
             var city = button.getAttribute('data-city');
+            var state=button.getAttribute('data-state')
           
             var pincode = button.getAttribute('data-pincode');
 
@@ -170,14 +175,14 @@
             var modalArea=editAddressModal.querySelector('#area');
             var modalLandmark=editAddressModal.querySelector('#landmark');
             var modalCity = editAddressModal.querySelector('#city');
-          
+            var modalState=editAddressModal.querySelector('#state')
             var modalPincode = editAddressModal.querySelector('#pincode');
 
             modalFlatBuilding.value = flatBuilding;
             modalArea.value=area;
             modalLandmark.value=landmark;
             modalCity.value = city;
-        
+            modalState.value=state;
             modalPincode.value = pincode;
 
             // Handle form submission to update address
@@ -192,6 +197,7 @@
                     area:modalArea.value,
                     landmark:modalArea.value,
                     city: modalCity.value,
+                    state:modalState.value,
                     pincode: modalPincode.value
                 };
 

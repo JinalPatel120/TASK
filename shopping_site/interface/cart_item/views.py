@@ -95,6 +95,7 @@ class CartView(View):
         try:
             # Fetch the cart items for the user
             cart_items = self.cart_service.get_cart_items(request.user, request)
+            print(cart_items,'cart items')
 
             # Calculate the total cost of the cart directly from the query
             total = sum(item.total_price for item in cart_items)

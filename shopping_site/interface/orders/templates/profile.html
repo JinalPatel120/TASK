@@ -113,7 +113,7 @@
                             <h2>Change Password</h2>
                         </div>
                         <div class="card-body">
-                            {% comment %} <form method="POST" action="{% url 'change_password' %}"> {% endcomment %}
+                            <form id="changePasswordForm"> 
                             {% csrf_token %}
                             <div class="form-group">
                                 <label for="old_password">Current Password</label>
@@ -182,7 +182,7 @@
   
                         <input type="hidden" name="id" id="id" value="{{ address.id }}">  <!-- Hidden input for address_id -->
 
-                        {{ address.id }}
+          
 
                     <!-- Flat/Building -->
                     <div class="col-md-6">
@@ -226,8 +226,16 @@
                     <!-- City -->
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="city">City:</label>
+                            <label for="city">City</label>
                             <input type="text" class="form-control" id="city" value="{{ address.city }}" name="city" >
+                        </div>
+                    </div>
+
+                     <!-- State -->
+                     <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="state">State</label>
+                            <input type="text" class="form-control" id="state" value="{{ address.state }}" name="state" >
                         </div>
                     </div>
 
@@ -246,129 +254,6 @@
 
 
 <script>
-    function showTab(tabId) {
-        // Hide all tabs
-        document.querySelectorAll('.tab-pane').forEach(tab => {
-            tab.classList.remove('show', 'active');
-        });
-
-        // Show the selected tab
-        document.getElementById(tabId).classList.add('show', 'active');
-        
-        // Highlight the active link
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        document.querySelector(`a[href="#${tabId}"]`).classList.add('active');
-    }
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-
-
-        // Ensure buttons exist
-        const cancelButtons = document.querySelectorAll('.cancel-order-btn');
- 
-
-        cancelButtons.forEach(function(button) {
-            // Ensure event listener is being attached
-      
-            
-            button.addEventListener('click', function(event) {
-                event.preventDefault();  
-                
-                // Get order ID
-                var orderId = button.closest('li').dataset.orderId;
-            
-                
-                if (confirm('Are you sure you want to cancel this order?')) {
-                    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-        
-
-                    fetch(`/orders/cancel_order/${orderId}/`, {  // Use dynamic order ID
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrfToken
-                        },
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                     
-                        if (data.success) {
-                            const orderElement = button.closest('li');
-                            orderElement.querySelector('p:nth-of-type(2)').innerText = 'Status: Cancelled'; // Update status
-                            button.remove(); 
-
-                            alert('Order cancelled successfully.');
-                        } else {
-                            alert('Failed to cancel order: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        alert('An error occurred: ' + error.message);
-                    });
-                }
-            });
-        });
-    });
-</script>
-
-<script>
-
-    document.getElementById("update-address-form").addEventListener("submit", function(event) {
-        event.preventDefault(); // Prevents the default form submission
-
-        // Collect form data
-        const formData = new FormData(event.target);
-        const data = {};
-        const errorMessages = []; 
-   
-
-        formData.forEach((value, key) => {
-            data[key] = value;
-        });
-        console.log(data,'data');
-     
-        console.log("{% url 'update_address' %}",'url');  // Log the generated URL
-
-        const requiredFields = ["id", "flat_building", "area", "landmark", "city", "pincode"];
-        requiredFields.forEach(field => {
-            if (!data[field] || data[field].trim() === "") {
-                errorMessages.push(`The ${field.replace("_", " ")} field is required.`);
-            }
-        });
-
-        // If there are validation errors, display them and stop the form submission
-        if (errorMessages.length > 0) {
-            alert(errorMessages.join("\n"));
-            return;
-        }
-
-        // Send the data via fetch (AJAX request)
-        fetch("{% url 'update_address' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json", // We are sending JSON
-                "X-CSRFToken": getCookie('csrftoken')  // Add CSRF token for Django security
-            },
-            body: JSON.stringify(data)  // Convert the data object to JSON
-        })
-        .then(response => response.json())
-        .then(responseData => {
-            console.log('Server response:', responseData);
-            if (responseData.success) {
-                alert("Address updated successfully!");
-            } else {
-                alert("Error updating address: " + responseData.message);
-            }
-        })
-        .catch(error => {
-            console.error("Error submitting the form:", error);
-            alert("Error submitting the form.");
-        });
-    });
-
     // Utility function to get CSRF token from the browser cookies
     function getCookie(name) {
         let cookieValue = null;
@@ -384,8 +269,147 @@
         }
         return cookieValue;
     }
-</script>
+    
+    // Handle form submission for password change
+    document.addEventListener('DOMContentLoaded', function () {
+        const changePasswordForm = document.getElementById('changePasswordForm');
+        const updateAddressForm = document.getElementById('update-address-form');
+        const cancelButtons = document.querySelectorAll('.cancel-order-btn');
+        
+        console.log(changePasswordForm,'change password form')
+        console.log(updateAddressForm,'update address form')
+        // Password Change Form
+        if (changePasswordForm) {
+            changePasswordForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+    
+                const formData = new FormData(e.target);
+                const data = {};
+                formData.forEach((value, key) => data[key] = value);
+                console.log('data',data)
+                
+    
+                const url = '{% url "change_password" %}';
+                console.log(url,'url')
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(data)
+                })
+                    .then(response => response.json())
+                    .then(responseData => {
+                        if (responseData.success) {
+                            alert("Password Changed successfully!");
+                        } else {
+                            alert("Error updating password: " + responseData.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error submitting the form:", error);
+                        alert("Error submitting the form.");
+                    });
+            });
+        }
+    
+        // Address Update Form
+        if (updateAddressForm) {
+            updateAddressForm.addEventListener("submit", function (event) {
+                event.preventDefault();
+    
+                const formData = new FormData(event.target);
+                const data = {};
+                const errorMessages = [];
+    
+                formData.forEach((value, key) => data[key] = value);
+    
+                const requiredFields = ["id", "flat_building", "area", "landmark", "city", "pincode", "state"];
+                requiredFields.forEach(field => {
+                    if (!data[field] || data[field].trim() === "") {
+                        errorMessages.push(`The ${field.replace("_", " ")} field is required.`);
+                    }
+                });
+    
+                if (errorMessages.length > 0) {
+                    alert(errorMessages.join("\n"));
+                    return;
+                }
+    
+                fetch("{% url 'update_address' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(data)
+                })
+                    .then(response => response.json())
+                    .then(responseData => {
+                        if (responseData.success) {
+                            alert("Address updated successfully!");
+                        } else {
+                            alert("Error updating address: " + responseData.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error submitting the form:", error);
+                        alert("Error submitting the form.");
+                    });
+            });
+        }
+    
+        // Cancel Order Button
+        cancelButtons.forEach(button => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+    
+                var orderId = button.closest('li').dataset.orderId;
+                if (confirm('Are you sure you want to cancel this order?')) {
+                    const csrfToken = getCookie('csrftoken');
+                    fetch(`/orders/cancel_order/${orderId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                const orderElement = button.closest('li');
+                                orderElement.querySelector('p:nth-of-type(2)').innerText = 'Status: Cancelled';
+                                button.remove();
+                                alert('Order cancelled successfully.');
+                            } else {
+                                alert('Failed to cancel order: ' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            alert('An error occurred: ' + error.message);
+                        });
+                }
+            });
+        });
+    });
+    </script>
+    
+    <script>
+    // Tab Navigation
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(tab => {
+            tab.classList.remove('show', 'active');
+        });
+    
+        document.getElementById(tabId).classList.add('show', 'active');
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        document.querySelector(`a[href="#${tabId}"]`).classList.add('active');
+    }
+    </script>
+    
 
 
-</script>
+
 {% endblock %}

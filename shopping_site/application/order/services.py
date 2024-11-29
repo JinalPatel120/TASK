@@ -10,7 +10,8 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from typing import Optional, Tuple
-
+from django.shortcuts import get_object_or_404
+from shopping_site.infrastructure.logger.models import logger
 
 class OrderApplicationService:
     """
@@ -26,6 +27,32 @@ class OrderApplicationService:
             List[Orders]: A list of all orders in the database.
         """
         return OrderService.get_all_orders()
+    
+    def manage_cart_session(self, request, session_id):
+        # If there's no session key in the request
+        if not request.session.session_key:
+            try:
+                # Try to get the cart by session_id
+                cart =  get_object_or_404(Cart, session_key=session_id)
+                cart.delete()
+                
+                cart_items=CartItem.objects.filter(cart=cart)
+                # Delete the cart itself
+                cart_items.delete()
+            except Cart.DoesNotExist:
+                self.log.info(f"No cart found with session_key {session_id}")
+        
+
+        if request.user.is_authenticated:
+            logger.debug(f"Authenticated user: {request.user}, updating session_key to {session_id}")
+            updated_count = Cart.objects.filter(user=request.user).update(session_key=session_id)
+            if updated_count > 0:
+                logger.info(f"Successfully updated session_key for {updated_count} carts.")
+            else:
+                logger.warning(f"No cart found for user {request.user} to update.")
+
+
+        return {"success": True}
 
     @staticmethod
     def create_order(user: User, address: str, payment_method: str) -> Orders:

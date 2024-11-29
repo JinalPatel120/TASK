@@ -7,7 +7,7 @@ from shopping_site.infrastructure.logger.models import AttributeLogger
 from django.contrib.sessions.models import Session
 from django.utils.timezone import now
 import uuid
-from django.db.models import F, ExpressionWrapper, DecimalField, Sum
+from django.db.models import F, ExpressionWrapper, DecimalField, Sum,Q
 from typing import Optional, Tuple, Dict
 
 
@@ -79,11 +79,9 @@ class CartService:
         Retrieve all items in the user's cart (authenticated or anonymous).
         """
         cart = Cart.objects.filter(
-            user=user if user.is_authenticated else None,
-            session_key=(
-                request.session.session_key if not user.is_authenticated else None
-            ),
-        ).first()
+                Q(user=user) if user.is_authenticated else Q(session_key=request.session.session_key)
+            ).first()
+
 
         if cart:
             # Fetch cart items with related products and annotate total_price in the query

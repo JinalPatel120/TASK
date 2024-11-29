@@ -18,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from functools import wraps
 from urllib.parse import parse_qs
-
+from django.contrib.auth import update_session_auth_hash
 
 class ManageSession(View):
     """
@@ -26,19 +26,11 @@ class ManageSession(View):
     user details, and managing the user's shipping address.
     """
 
-    cart_service = CartService(log=logger)
-    user_service = UserApplicationService(log=logger)
+    order_service = OrderApplicationService()
 
     def get(self, request, session_id):
-        if not request.session.session_key:
-            cart = get_object_or_404(Cart, session_key=session_id)
-            cart.delete()
-            cart_items = CartItem.objects.filter(cart=cart)
-            cart_items.delete()
-
-        if request.user.is_authenticated:
-            cart = Cart.objects.update(session_key=session_id)
-        return JsonResponse({"success": True}, status=200)
+        response = self.order_service.manage_cart_session(request, session_id)
+        return JsonResponse(response, status=200)
 
 
 def login_required(view_func):
@@ -623,6 +615,7 @@ class UpdateAddressView(View):
         landmark = data.get("landmark")
         city = data.get("city")
         pincode = data.get("pincode")
+        state=data.get("state")
 
         try:
             logger.info(
@@ -636,17 +629,10 @@ class UpdateAddressView(View):
             address.landmark = landmark
             address.city = city
             address.pincode = pincode
-            from django.db import transaction
-
-            try:
-                with transaction.atomic():
-                    address.save()
-            except Exception as e:
-                logger.error(f"Error saving address: {str(e)}")
-                return JsonResponse(
-                    {"success": False, "message": "Error saving address"}
-                )
-
+            address.state=state
+           
+            address.save()
+            
             logger.debug(
                 f"Received data for updating address ID {address_id} for user {request.user.username}"
             )
@@ -676,6 +662,7 @@ class TrackOrderView(View):
             return redirect("profile")
 
 
+
 class CancelOrderView(View):
     @method_decorator(login_required)
     def post(self, request, order_id):
@@ -701,3 +688,37 @@ class CancelOrderView(View):
                     "message": "Unable to cancel order. Please try again.",
                 }
             )
+
+
+
+
+
+
+class ChangePasswordView(View):
+    def post(self, request, *args, **kwargs):
+        print('herlolllllllooooooooooooooooo')
+        old_password = request.POST.get('old_password')
+        new_password = request.POST.get('new_password')
+        re_new_password = request.POST.get('re_new_password')
+
+        # Check if the old password is correct
+        if not request.user.check_password(old_password):
+            return JsonResponse({'error': 'Old password is incorrect'}, status=400)
+
+        # Ensure the new password and re-entered new password match
+        if new_password != re_new_password:
+            return JsonResponse({'error': 'New passwords do not match'}, status=400)
+
+        # Update the user's password
+        try:
+            user = request.user
+            user.set_password(new_password)
+            user.save()
+
+            # Update the session with the new password (important for keeping the user logged in)
+            update_session_auth_hash(request, user)
+
+            return JsonResponse({'success': 'Password updated successfully'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
